@@ -14,8 +14,8 @@ sys.path.append(parent_dir)
 
 from unitree_sdk2py.core.channel import ChannelFactoryInitialize # dds 
 from televuer import TeleVuerWrapper
-from teleop.robot_control.robot_arm import G1_29_ArmController, G1_23_ArmController, H1_2_ArmController, H1_ArmController, H2_ArmController
-from teleop.robot_control.robot_arm_ik import G1_29_ArmIK, G1_23_ArmIK, H1_2_ArmIK, H1_ArmIK, H2_ArmIK
+from teleop.robot_control.robot_arm import G1_29_ArmController, G1_23_ArmController, H1_2_ArmController, H1_ArmController, H2_ArmController, R1_A5_ArmController, R1_A7_ArmController
+from teleop.robot_control.robot_arm_ik import G1_29_ArmIK, G1_23_ArmIK, H1_2_ArmIK, H1_ArmIK, H2_ArmIK, R1_A5_ArmIK, R1_A7_ArmIK
 from teleimager.image_client import ImageClient
 from teleop.utils.episode_writer import EpisodeWriter
 from teleop.utils.ipc import IPC_Server
@@ -76,7 +76,7 @@ if __name__ == '__main__':
     parser.add_argument('--frequency', type = float, default = 30.0, help = 'control and record \'s frequency')
     parser.add_argument('--input-mode', type=str, choices=['hand', 'controller'], default='hand', help='Select XR device input tracking source')
     parser.add_argument('--display-mode', type=str, choices=['immersive', 'ego', 'pass-through'], default='immersive', help='Select XR device display mode')
-    parser.add_argument('--arm', type=str, choices=['G1_29', 'G1_23', 'H1_2', 'H1', 'H2'], default='G1_29', help='Select arm controller')
+    parser.add_argument('--arm', type=str, choices=['G1_29', 'G1_23', 'H1_2', 'H1', 'H2', 'R1_A5', 'R1_A7'], default='G1_29', help='Select arm controller')
     parser.add_argument('--ee', type=str, choices=['dex1', 'dex3', 'inspire_ftp', 'inspire_dfx', 'brainco'], help='Select end effector controller')
     # network parameters
     parser.add_argument('--img-server-ip', type=str, default='192.168.123.164', help='IP address of image server, used by teleimager and televuer')
@@ -161,6 +161,12 @@ if __name__ == '__main__':
         elif args.arm == "H2":
             arm_ik = H2_ArmIK()
             arm_ctrl = H2_ArmController(motion_mode=args.motion, simulation_mode=args.sim)
+        elif args.arm == "R1_A5":
+            arm_ik = R1_A5_ArmIK()
+            arm_ctrl = R1_A5_ArmController(motion_mode=args.motion, simulation_mode=args.sim)
+        elif args.arm == "R1_A7":
+            arm_ik = R1_A7_ArmIK()
+            arm_ctrl = R1_A7_ArmController(motion_mode=args.motion, simulation_mode=args.sim)
 
         # end-effector
         xr_motion_data_ready = Value('b', False, lock=True)        # [input] whether XR hand/controller motion data has arrived
