@@ -14,6 +14,8 @@ from unitree_sdk2py.idl.default import unitree_go_msg_dds__LowCmd_
 import logging_mp
 logger_mp = logging_mp.getLogger(__name__)
 
+from teleop.robot_control.dds_utils import wait_for_dds
+
 kTopicLowCommand_Debug  = "rt/lowcmd"
 kTopicLowCommand_Motion = "rt/arm_sdk"
 kTopicLowState = "rt/lowstate"
@@ -104,16 +106,14 @@ class G1_29_ArmController:
         self.lowstate_subscriber = ChannelSubscriber(kTopicLowState, hg_LowState)
         self.lowstate_subscriber.Init()
         self.lowstate_buffer = DataBuffer()
+        self.lowstate_sub_ready = False
 
         # initialize subscribe thread
         self.subscribe_thread = threading.Thread(target=self._subscribe_motor_state)
         self.subscribe_thread.daemon = True
         self.subscribe_thread.start()
 
-        while not self.lowstate_buffer.GetData():
-            time.sleep(0.1)
-            logger_mp.warning("[G1_29_ArmController] Waiting to subscribe dds...")
-        logger_mp.info("[G1_29_ArmController] Subscribe dds ok.")
+        wait_for_dds(lambda: self.lowstate_sub_ready, "G1_29_ArmController")
 
         # initialize hg's lowcmd msg
         self.crc = CRC()
@@ -163,6 +163,7 @@ class G1_29_ArmController:
                     lowstate.motor_state[id].q  = msg.motor_state[id].q
                     lowstate.motor_state[id].dq = msg.motor_state[id].dq
                 self.lowstate_buffer.SetData(lowstate)
+                self.lowstate_sub_ready = True
             time.sleep(0.002)
 
     def clip_arm_q_target(self, target_q, velocity_limit):
@@ -387,16 +388,14 @@ class G1_23_ArmController:
         self.lowstate_subscriber = ChannelSubscriber(kTopicLowState, hg_LowState)
         self.lowstate_subscriber.Init()
         self.lowstate_buffer = DataBuffer()
+        self.lowstate_sub_ready = False
 
         # initialize subscribe thread
         self.subscribe_thread = threading.Thread(target=self._subscribe_motor_state)
         self.subscribe_thread.daemon = True
         self.subscribe_thread.start()
 
-        while not self.lowstate_buffer.GetData():
-            time.sleep(0.1)
-            logger_mp.warning("[G1_23_ArmController] Waiting to subscribe dds...")
-        logger_mp.info("[G1_23_ArmController] Subscribe dds ok.")
+        wait_for_dds(lambda: self.lowstate_sub_ready, "G1_23_ArmController")
 
         # initialize hg's lowcmd msg
         self.crc = CRC()
@@ -446,6 +445,7 @@ class G1_23_ArmController:
                     lowstate.motor_state[id].q  = msg.motor_state[id].q
                     lowstate.motor_state[id].dq = msg.motor_state[id].dq
                 self.lowstate_buffer.SetData(lowstate)
+                self.lowstate_sub_ready = True
             time.sleep(0.002)
 
     def clip_arm_q_target(self, target_q, velocity_limit):
@@ -662,16 +662,14 @@ class H1_2_ArmController:
         self.lowstate_subscriber = ChannelSubscriber(kTopicLowState, hg_LowState)
         self.lowstate_subscriber.Init()
         self.lowstate_buffer = DataBuffer()
+        self.lowstate_sub_ready = False
 
         # initialize subscribe thread
         self.subscribe_thread = threading.Thread(target=self._subscribe_motor_state)
         self.subscribe_thread.daemon = True
         self.subscribe_thread.start()
 
-        while not self.lowstate_buffer.GetData():
-            time.sleep(0.1)
-            logger_mp.warning("[H1_2_ArmController] Waiting to subscribe dds...")
-        logger_mp.info("[H1_2_ArmController] Subscribe dds ok.")
+        wait_for_dds(lambda: self.lowstate_sub_ready, "H1_2_ArmController")
 
         # initialize hg's lowcmd msg
         self.crc = CRC()
@@ -721,6 +719,7 @@ class H1_2_ArmController:
                     lowstate.motor_state[id].q  = msg.motor_state[id].q
                     lowstate.motor_state[id].dq = msg.motor_state[id].dq
                 self.lowstate_buffer.SetData(lowstate)
+                self.lowstate_sub_ready = True
             time.sleep(0.002)
 
     def clip_arm_q_target(self, target_q, velocity_limit):
@@ -937,16 +936,14 @@ class H1_ArmController:
         self.lowstate_subscriber = ChannelSubscriber(kTopicLowState, go_LowState)
         self.lowstate_subscriber.Init()
         self.lowstate_buffer = DataBuffer()
+        self.lowstate_sub_ready = False
 
         # initialize subscribe thread
         self.subscribe_thread = threading.Thread(target=self._subscribe_motor_state)
         self.subscribe_thread.daemon = True
         self.subscribe_thread.start()
 
-        while not self.lowstate_buffer.GetData():
-            time.sleep(0.1)
-            logger_mp.warning("[H1_ArmController] Waiting to subscribe dds...")
-        logger_mp.info("[H1_ArmController] Subscribe dds ok.")
+        wait_for_dds(lambda: self.lowstate_sub_ready, "H1_ArmController")
 
         # initialize h1's lowcmd msg
         self.crc = CRC()
@@ -990,6 +987,7 @@ class H1_ArmController:
                     lowstate.motor_state[id].q  = msg.motor_state[id].q
                     lowstate.motor_state[id].dq = msg.motor_state[id].dq
                 self.lowstate_buffer.SetData(lowstate)
+                self.lowstate_sub_ready = True
             time.sleep(0.002)
 
     def clip_arm_q_target(self, target_q, velocity_limit):
@@ -1161,16 +1159,14 @@ class H2_ArmController:
         self.lowstate_subscriber = ChannelSubscriber(kTopicLowState, hg_LowState)
         self.lowstate_subscriber.Init()
         self.lowstate_buffer = DataBuffer()
+        self.lowstate_sub_ready = False
 
         # initialize subscribe thread
         self.subscribe_thread = threading.Thread(target=self._subscribe_motor_state)
         self.subscribe_thread.daemon = True
         self.subscribe_thread.start()
 
-        while not self.lowstate_buffer.GetData():
-            time.sleep(0.1)
-            logger_mp.warning("[H2_ArmController] Waiting to subscribe dds...")
-        logger_mp.info("[H2_ArmController] Subscribe dds ok.")
+        wait_for_dds(lambda: self.lowstate_sub_ready, "H2_ArmController")
 
         # initialize hg's lowcmd msg
         self.crc = CRC()
@@ -1223,6 +1219,7 @@ class H2_ArmController:
                     lowstate.motor_state[id].q = msg.motor_state[id].q
                     lowstate.motor_state[id].dq = msg.motor_state[id].dq
                 self.lowstate_buffer.SetData(lowstate)
+                self.lowstate_sub_ready = True
             time.sleep(0.002)
 
     def clip_arm_q_target(self, target_q, velocity_limit):
@@ -1444,16 +1441,14 @@ class R1_A5_ArmController:
         self.lowstate_subscriber = ChannelSubscriber(kTopicLowState, hg_LowState)
         self.lowstate_subscriber.Init()
         self.lowstate_buffer = DataBuffer()
+        self.lowstate_sub_ready = False
 
         # initialize subscribe thread
         self.subscribe_thread = threading.Thread(target=self._subscribe_motor_state)
         self.subscribe_thread.daemon = True
         self.subscribe_thread.start()
 
-        while not self.lowstate_buffer.GetData():
-            time.sleep(0.1)
-            logger_mp.warning("[R1_A5_ArmController] Waiting to subscribe dds...")
-        logger_mp.info("[R1_A5_ArmController] Subscribe dds ok.")
+        wait_for_dds(lambda: self.lowstate_sub_ready, "R1_A5_ArmController")
 
         # initialize hg's lowcmd msg
         self.crc = CRC()
@@ -1510,6 +1505,7 @@ class R1_A5_ArmController:
                     lowstate.motor_state[id].q  = msg.motor_state[id].q
                     lowstate.motor_state[id].dq = msg.motor_state[id].dq
                 self.lowstate_buffer.SetData(lowstate)
+                self.lowstate_sub_ready = True
             time.sleep(0.002)
 
     def clip_arm_q_target(self, target_q, velocity_limit):
@@ -1747,16 +1743,14 @@ class R1_A7_ArmController:
         self.lowstate_subscriber = ChannelSubscriber(kTopicLowState, hg_LowState)
         self.lowstate_subscriber.Init()
         self.lowstate_buffer = DataBuffer()
+        self.lowstate_sub_ready = False
 
         # initialize subscribe thread
         self.subscribe_thread = threading.Thread(target=self._subscribe_motor_state)
         self.subscribe_thread.daemon = True
         self.subscribe_thread.start()
 
-        while not self.lowstate_buffer.GetData():
-            time.sleep(0.1)
-            logger_mp.warning("[R1_A7_ArmController] Waiting to subscribe dds...")
-        logger_mp.info("[R1_A7_ArmController] Subscribe dds ok.")
+        wait_for_dds(lambda: self.lowstate_sub_ready, "R1_A7_ArmController")
 
         # initialize hg's lowcmd msg
         self.crc = CRC()
@@ -1813,6 +1807,7 @@ class R1_A7_ArmController:
                     lowstate.motor_state[id].q  = msg.motor_state[id].q
                     lowstate.motor_state[id].dq = msg.motor_state[id].dq
                 self.lowstate_buffer.SetData(lowstate)
+                self.lowstate_sub_ready = True
             time.sleep(0.002)
 
     def clip_arm_q_target(self, target_q, velocity_limit):
