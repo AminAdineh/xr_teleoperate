@@ -98,6 +98,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     logger_mp.debug(f"args: {args}")
 
+    if args.arm in ("R1_A5", "R1_A7") and args.motion:
+        parser.error(f"{args.arm} does not support motion mode (--motion).")
+
     try:
         # setup dds communication domains id
         if args.sim:
@@ -429,11 +432,10 @@ if __name__ == '__main__':
                     current_body_state = []
                     current_body_action = []
 
-                # arm state and action
-                left_arm_state  = current_lr_arm_q[:7]
-                right_arm_state = current_lr_arm_q[-7:]
-                left_arm_action = sol_q[:7]
-                right_arm_action = sol_q[-7:]
+                # arm state and action (split into left/right halves by the arm's own DOF, so it works for any variant: H1/G1_23/R1_A5 = 4/5 per arm, G1_29/R1_A7 = 7)
+                half = len(current_lr_arm_q) // 2
+                left_arm_state,  right_arm_state  = current_lr_arm_q[:half], current_lr_arm_q[half:]
+                left_arm_action, right_arm_action = sol_q[:half], sol_q[half:]
                 if RECORD_RUNNING:
                     colors = {}
                     depths = {}
