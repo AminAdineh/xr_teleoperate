@@ -36,11 +36,12 @@
 
 # 🔖 [版本说明](CHANGELOG_zh-CN.md)
 
-## 🏷️ v1.5 (2025.12.29)
+## 🏷️ v1.6 (2026.7.29)
 
-- 支持**仿真模式**
-- 添加 cyclonedds 网卡名称参数
-- [引入缓存机制以加速 URDF 加载](https://github.com/unitreerobotics/xr_teleoperate/commit/6cab654620735bfa347c1cd32a0d8c0c1e6ec343)
+- 支持 **H2** 机器人
+- 支持 **R1** 机器人（`R1_A5` / `R1_A7`）
+- 支持 **BrainCo** 灵巧手手柄输入控制
+- 默认采用基于头部偏航（head-yaw）的手臂参考系
 - ...
 
 

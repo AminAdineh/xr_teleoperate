@@ -36,11 +36,12 @@
 
 # 🔖[Release Note](CHANGELOG.md)
 
-## 🏷️ v1.5 (2025.12.29)
+## 🏷️ v1.6 (2026.7.29)
 
-- support simulation
-- add CycloneDDS interface name parameter
-- [add caching to speed-up urdf loading](https://github.com/unitreerobotics/xr_teleoperate/commit/6cab654620735bfa347c1cd32a0d8c0c1e6ec343)
+- support **H2** robot
+- support **R1** robot (`R1_A5` / `R1_A7`)
+- add **BrainCo** hand controller-input support
+- use head-yaw-relative arm reference by default
 - ...
 
 
