@@ -251,7 +251,11 @@ build  cert.pem  key.pem  LICENSE  pyproject.toml  README.md  rootCA.key  rootCA
 |   `--ipc`    | 【进程间通信模式】<br />可通过进程间通信来控制 xr_teleoperate 程序的状态切换，此模式适合与代理程序进行交互 |
 | `--affinity` | 【CPU亲和模式】<br />设置 CPU 核心亲和性。如果你不知道这是什么，那么请不要设置它。 |
 |  `--record`  | 【启用**数据录制**模式】<br />按 **r** 键进入遥操后，按 **s** 键可开启数据录制，再次按 **s** 键可结束录制并保存本次 episode 数据。<br />继续按下 **s** 键可重复前述过程。 |
-|  `--task-*`  | 此类参数可配置录制的文件保存路径，任务目标、描述、步骤等信息 |
+| `--task-dir` | 录制数据的保存路径。默认值：`./utils/data/` |
+| `--task-name` | 录制的任务文件名。默认值：`pick cube` |
+| `--task-goal` | 写入 json 文件的任务目标。默认值：`pick up cube at desk.` |
+| `--task-desc` | 写入 json 文件的任务描述。默认值：`task description` |
+| `--task-steps` | 写入 json 文件的任务步骤。默认值：`step1: do this; step2: do that;` |
 
 
 ## 1.4 🔄 状态转移图
@@ -305,7 +309,7 @@ build  cert.pem  key.pem  LICENSE  pyproject.toml  README.md  rootCA.key  rootCA
 
 ```bash
 (tv) unitree@Host:~$ cd ~/xr_teleoperate/teleop/
-(tv) unitree@Host:~/xr_teleoperate/teleop/$ python teleop_hand_and_arm.py --xr-mode=hand --arm=G1_29 --ee=dex3 --sim --record
+(tv) unitree@Host:~/xr_teleoperate/teleop/$ python teleop_hand_and_arm.py --input-mode=hand --arm=G1_29 --ee=dex3 --sim --record
 # 实际上，由于一些参数存在默认值，该命令也可简化为：
 (tv) unitree@Host:~/xr_teleoperate/teleop/$ python teleop_hand_and_arm.py --ee=dex3 --sim --record
 ```

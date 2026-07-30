@@ -239,7 +239,11 @@ build  cert.pem  key.pem  LICENSE  pyproject.toml  README.md  rootCA.key  rootCA
 |   `--ipc`    | **Inter-process communication mode** Allows controlling the xr_teleoperate program’s state via IPC. Suitable for interaction with agent programs. |
 | `--affinity` | **CPU affinity mode** Set CPU core affinity. If you are unsure what this is, do not set it. |
 |  `--record`  | **Enable data recording mode** Press **r** to start teleoperation, then **s** to start recording; press **s** again to stop and save the episode. Press **s** repeatedly to repeat the process. |
-|  `--task-*`  | Configure the save path, target, description, and steps of the recorded task. |
+| `--task-dir` | Path to save recorded data. Default: `./utils/data/` |
+| `--task-name` | Task file name for recording. Default: `pick cube` |
+| `--task-goal` | Task goal recorded in the json file. Default: `pick up cube.` |
+| `--task-desc` | Task description recorded in the json file. Default: `task description` |
+| `--task-steps` | Task steps recorded in the json file. Default: `step1: do this; step2: do that;` |
 
 ## 1.4 🔄 State Transition Diagram
 
@@ -282,7 +286,7 @@ Assuming hand tracking with G1(29 DoF) + Dex3 in simulation with recording:
 
 ```bash
 (tv) unitree@Host:~$ cd ~/xr_teleoperate/teleop/
-(tv) unitree@Host:~/xr_teleoperate/teleop/$ python teleop_hand_and_arm.py --xr-mode=hand --arm=G1_29 --ee=dex3 --sim --record
+(tv) unitree@Host:~/xr_teleoperate/teleop/$ python teleop_hand_and_arm.py --input-mode=hand --arm=G1_29 --ee=dex3 --sim --record
 # Simplified (defaults apply):
 (tv) unitree@Host:~/xr_teleoperate/teleop/$ python teleop_hand_and_arm.py --ee=dex3 --sim --record
 ```

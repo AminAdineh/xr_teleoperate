@@ -248,7 +248,11 @@ build  cert.pem  key.pem  LICENSE  pyproject.toml  README.md  rootCA.key  rootCA
 |   `--ipc`    | 【プロセス間通信モード】<br />IPC を通じて xr_teleoperate プログラムの状態遷移を制御できます。エージェントプログラムとの連携に適しています。 |
 | `--affinity` | 【CPU アフィニティモード】<br />CPU コアのアフィニティを設定します。分からない場合は設定しないでください。 |
 |  `--record`  | 【**データ記録モード**を有効化】<br />**r** で遠隔操作を開始した後、**s** で記録開始、再度 **s** でエピソードの記録を停止・保存します。**s** を繰り返し押すことでこの操作を繰り返せます。 |
-|  `--task-*`  | 記録タスクの保存パス、目標、説明、手順などの情報を設定します。 |
+| `--task-dir` | 記録データの保存パス。デフォルト：`./utils/data/` |
+| `--task-name` | 記録するタスクのファイル名。デフォルト：`pick cube` |
+| `--task-goal` | json ファイルに記録するタスク目標。デフォルト：`pick up cube.` |
+| `--task-desc` | json ファイルに記録するタスク説明。デフォルト：`task description` |
+| `--task-steps` | json ファイルに記録するタスク手順。デフォルト：`step1: do this; step2: do that;` |
 
 ## 1.4 🔄 状態遷移図
 
@@ -300,7 +304,7 @@ build  cert.pem  key.pem  LICENSE  pyproject.toml  README.md  rootCA.key  rootCA
 
 ```bash
 (tv) unitree@Host:~$ cd ~/xr_teleoperate/teleop/
-(tv) unitree@Host:~/xr_teleoperate/teleop/$ python teleop_hand_and_arm.py --xr-mode=hand --arm=G1_29 --ee=dex3 --sim --record
+(tv) unitree@Host:~/xr_teleoperate/teleop/$ python teleop_hand_and_arm.py --input-mode=hand --arm=G1_29 --ee=dex3 --sim --record
 # 一部のパラメータにはデフォルト値があるため、次のように簡略化することもできます:
 (tv) unitree@Host:~/xr_teleoperate/teleop/$ python teleop_hand_and_arm.py --ee=dex3 --sim --record
 ```
