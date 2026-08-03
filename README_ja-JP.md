@@ -246,7 +246,6 @@ build  cert.pem  key.pem  LICENSE  pyproject.toml  README.md  rootCA.key  rootCA
 | `--headless` | 【**ヘッドレスモード**を有効化】<br />ディスプレイのない開発用計算ユニット（PC2）などでの実行に適しています。 |
 |   `--sim`    | 【[**シミュレーションモード**](https://github.com/unitreerobotics/unitree_sim_isaaclab)を有効化】 |
 |   `--ipc`    | 【プロセス間通信モード】<br />IPC を通じて xr_teleoperate プログラムの状態遷移を制御できます。エージェントプログラムとの連携に適しています。 |
-| `--affinity` | 【CPU アフィニティモード】<br />CPU コアのアフィニティを設定します。分からない場合は設定しないでください。 |
 |  `--record`  | 【**データ記録モード**を有効化】<br />**r** で遠隔操作を開始した後、**s** で記録開始、再度 **s** でエピソードの記録を停止・保存します。**s** を繰り返し押すことでこの操作を繰り返せます。 |
 | `--task-dir` | 記録データの保存パス。デフォルト：`./utils/data/` |
 | `--task-name` | 記録するタスクのファイル名。デフォルト：`pick cube` |

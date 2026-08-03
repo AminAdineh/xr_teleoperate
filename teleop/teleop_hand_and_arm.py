@@ -86,7 +86,6 @@ if __name__ == '__main__':
     parser.add_argument('--headless', action='store_true', help='Enable headless mode (no display)')
     parser.add_argument('--sim', action = 'store_true', help = 'Enable isaac simulation mode')
     parser.add_argument('--ipc', action = 'store_true', help = 'Enable IPC server to handle input; otherwise enable sshkeyboard')
-    parser.add_argument('--affinity', action = 'store_true', help = 'Enable high priority and set CPU affinity mode')
     # record mode and task info
     parser.add_argument('--record', action = 'store_true', help = 'Enable data recording mode')
     parser.add_argument('--task-dir', type = str, default = './utils/data/', help = 'path to save data')
@@ -246,25 +245,6 @@ if __name__ == '__main__':
         else:
             pass
         
-        # affinity mode (if you dont know what it is, then you probably don't need it)
-        if args.affinity:
-            import psutil
-            p = psutil.Process(os.getpid())
-            p.cpu_affinity([0,1,2,3]) # Set CPU affinity to cores 0-3
-            try:
-                p.nice(-20)           # Set highest priority
-                logger_mp.info("Set high priority successfully.")
-            except psutil.AccessDenied:
-                logger_mp.warning("Failed to set high priority. Please run as root.")
-                
-            for child in p.children(recursive=True):
-                try:
-                    logger_mp.info(f"Child process {child.pid} name: {child.name()}")
-                    child.cpu_affinity([5,6])
-                    child.nice(-20)
-                except psutil.AccessDenied:
-                    pass
-
         # simulation mode
         if args.sim:
             reset_pose_publisher = ChannelPublisher("rt/reset_pose/cmd", String_)

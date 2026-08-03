@@ -249,7 +249,6 @@ build  cert.pem  key.pem  LICENSE  pyproject.toml  README.md  rootCA.key  rootCA
 | `--headless` | 【启用**无图形界面**模式】<br />适用于本程序部署在开发计算单元（PC2）等无显示器情况 |
 |   `--sim`    | 【启用[**仿真模式**](https://github.com/unitreerobotics/unitree_sim_isaaclab)】 |
 |   `--ipc`    | 【进程间通信模式】<br />可通过进程间通信来控制 xr_teleoperate 程序的状态切换，此模式适合与代理程序进行交互 |
-| `--affinity` | 【CPU亲和模式】<br />设置 CPU 核心亲和性。如果你不知道这是什么，那么请不要设置它。 |
 |  `--record`  | 【启用**数据录制**模式】<br />按 **r** 键进入遥操后，按 **s** 键可开启数据录制，再次按 **s** 键可结束录制并保存本次 episode 数据。<br />继续按下 **s** 键可重复前述过程。 |
 | `--task-dir` | 录制数据的保存路径。默认值：`./utils/data/` |
 | `--task-name` | 录制的任务文件名。默认值：`pick cube` |
