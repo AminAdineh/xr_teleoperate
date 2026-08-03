@@ -98,9 +98,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     logger_mp.debug(f"args: {args}")
 
-    if args.arm in ("R1_A5", "R1_A7") and args.motion:
-        parser.error(f"{args.arm} does not support motion mode (--motion).")
-
     try:
         # setup dds communication domains id
         if args.sim:

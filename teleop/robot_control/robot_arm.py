@@ -1416,14 +1416,14 @@ class R1_A5_ArmController:
         self.tauff_target = np.zeros(10)
         self.motion_mode = motion_mode
         self.simulation_mode = simulation_mode
-        self.kp_high = 300.0
+        self.kp_high = 200.0
         self.kd_high = 3.0
-        self.kp_low = 80.0
-        self.kd_low = 3.0
-        self.kp_wrist = 40.0
-        self.kd_wrist = 1.5
-        self.kp_head = 40.0
-        self.kd_head = 1.5
+        self.kp_low = 50.0
+        self.kd_low = 2.0
+        self.kp_wrist = 30.0
+        self.kd_wrist = 2.0
+        self.kp_head = 15.0
+        self.kd_head = 1.0
 
         self.all_motor_q = None
         self.arm_velocity_limit = 20.0
@@ -1453,17 +1453,23 @@ class R1_A5_ArmController:
         # initialize hg's lowcmd msg
         self.crc = CRC()
         self.msg = unitree_hg_msg_dds__LowCmd_()
-        self.msg.mode_pr = 0
+        # R1 arm_sdk uses mode_pr as a percentage weight.  This differs from
+        # G1/H1_2, which use an otherwise notused joint command as the weight.
+        self.msg.mode_pr = 100 if self.motion_mode else 0
         self.msg.mode_machine = self.get_mode_machine()
 
         self.all_motor_q = self.get_current_motor_q()
         logger_mp.debug(f"Current all body motor state q:\n{self.all_motor_q} \n")
         logger_mp.debug(f"Current two arms motor state q:\n{self.get_current_dual_arm_q()}\n")
-        logger_mp.info("Lock all joints except two arms and head...")
-
+        logger_mp.info("Initialize R1 A5 joint commands...")
         arm_indices = set(member.value for member in R1_A5_JointArmIndex)
         head_indices = set(member.value for member in R1_A5_JointHeadIndex)
+        arm_sdk_indices = arm_indices | head_indices | {R1_A5_JointIndex.kWaistYaw.value}
         for id in R1_A5_JointIndex:
+            # rt/arm_sdk only consumes the 13 joints declared by R1 ArmSdk.
+            # rt/lowcmd still needs a complete low-level command.
+            if self.motion_mode and id.value not in arm_sdk_indices:
+                continue
             self.msg.motor_cmd[id].mode = 1
             if id.value in arm_indices:
                 if self._Is_wrist_motor(id):
@@ -1475,6 +1481,9 @@ class R1_A5_ArmController:
             elif id.value in head_indices:
                 self.msg.motor_cmd[id].kp = self.kp_head
                 self.msg.motor_cmd[id].kd = self.kd_head
+            elif id == R1_A5_JointIndex.kWaistYaw:
+                self.msg.motor_cmd[id].kp = self.kp_low
+                self.msg.motor_cmd[id].kd = self.kd_high
             else:
                 if self._Is_weak_motor(id):
                     self.msg.motor_cmd[id].kp = self.kp_low
@@ -1482,8 +1491,10 @@ class R1_A5_ArmController:
                 else:
                     self.msg.motor_cmd[id].kp = self.kp_high
                     self.msg.motor_cmd[id].kd = self.kd_high
-            self.msg.motor_cmd[id].q  = self.all_motor_q[id]
-        logger_mp.info("Lock OK!")
+            self.msg.motor_cmd[id].q = self.all_motor_q[id]
+            self.msg.motor_cmd[id].dq = 0.0
+            self.msg.motor_cmd[id].tau = 0.0
+        logger_mp.info("R1 A5 joint commands initialized.")
 
         # head pitch/yaw gradually return to zero at startup
         self.ctrl_head_go_home()
@@ -1495,6 +1506,22 @@ class R1_A5_ArmController:
         self.publish_thread.start()
 
         logger_mp.info("Initialize R1_A5_ArmController OK!")
+
+    def _set_arm_sdk_weight(self, weight):
+        """Set the R1 arm_sdk blend weight, where mode_pr stores 0..100."""
+        self.msg.mode_pr = int(np.clip(weight, 0.0, 1.0) * 100.0)
+
+    def release_arm_sdk(self, duration=2.0):
+        """Smoothly release R1 arm_sdk control back to ai_sport."""
+        if not self.motion_mode:
+            return
+        steps = max(1, int(duration / self.control_dt))
+        for weight in np.linspace(self.msg.mode_pr / 100.0, 0.0, num=steps + 1):
+            self._set_arm_sdk_weight(weight)
+            self.msg.crc = self.crc.Crc(self.msg)
+            self.lowcmd_publisher.Write(self.msg)
+            time.sleep(self.control_dt)
+        self._set_arm_sdk_weight(0.0)
 
     def _subscribe_motor_state(self):
         while True:
@@ -1530,9 +1557,6 @@ class R1_A5_ArmController:
         logger_mp.info("[R1_A5_ArmController] head return to zero OK!")
 
     def _ctrl_motor_state(self):
-        if self.motion_mode:
-            self.msg.motor_cmd[R1_A5_JointIndex.kNotUsedJoint0].q = 1.0;
-
         while True:
             start_time = time.time()
 
@@ -1597,17 +1621,19 @@ class R1_A5_ArmController:
             self.q_target = np.zeros(10)
             # self.tauff_target = np.zeros(10)
         tolerance = 0.05  # Tolerance threshold for joint angles to determine "close to zero", can be adjusted based on your motor's precision requirements
+        reached_home = False
         while current_attempts < max_attempts:
             current_q = self.get_current_dual_arm_q()
             if np.all(np.abs(current_q) < tolerance):
-                if self.motion_mode:
-                    for weight in np.linspace(1, 0, num=101):
-                        self.msg.motor_cmd[R1_A5_JointIndex.kNotUsedJoint0].q = weight;
-                        time.sleep(0.02)
+                reached_home = True
                 logger_mp.info("[R1_A5_ArmController] both arms have reached the home position.")
                 break
             current_attempts += 1
             time.sleep(0.05)
+        if not reached_home:
+            logger_mp.warning("[R1_A5_ArmController] timed out while returning arms home.")
+        # Always release the overlay on shutdown, even when homing times out.
+        self.release_arm_sdk()
 
     def speed_gradual_max(self, t = 5.0):
         '''Parameter t is the total time required for arms velocity to gradually increase to its maximum value, in seconds. The default is 5.0.'''
@@ -1714,18 +1740,19 @@ class R1_A5_JointIndex(IntEnum):
 class R1_A7_ArmController:
     def __init__(self, motion_mode = False, simulation_mode = False):
         logger_mp.info("Initialize R1_A7_ArmController...")
+        if motion_mode:
+            raise ValueError("R1_A7_ArmController does not support motion mode.")
         self.q_target = np.zeros(14)
         self.tauff_target = np.zeros(14)
-        self.motion_mode = motion_mode
         self.simulation_mode = simulation_mode
-        self.kp_high = 300.0
+        self.kp_high = 200.0
         self.kd_high = 3.0
-        self.kp_low = 80.0
-        self.kd_low = 3.0
-        self.kp_wrist = 40.0
-        self.kd_wrist = 1.5
-        self.kp_head = 40.0
-        self.kd_head = 1.5
+        self.kp_low = 50.0
+        self.kd_low = 2.0
+        self.kp_wrist = 30.0
+        self.kd_wrist = 2.0
+        self.kp_head = 15.0
+        self.kd_head = 1.0
 
         self.all_motor_q = None
         self.arm_velocity_limit = 20.0
@@ -1735,10 +1762,7 @@ class R1_A7_ArmController:
         self._gradual_start_time = None
         self._gradual_time = None
 
-        if self.motion_mode:
-            self.lowcmd_publisher = ChannelPublisher(kTopicLowCommand_Motion, hg_LowCmd)
-        else:
-            self.lowcmd_publisher = ChannelPublisher(kTopicLowCommand_Debug, hg_LowCmd)
+        self.lowcmd_publisher = ChannelPublisher(kTopicLowCommand_Debug, hg_LowCmd)
         self.lowcmd_publisher.Init()
         self.lowstate_subscriber = ChannelSubscriber(kTopicLowState, hg_LowState)
         self.lowstate_subscriber.Init()
@@ -1832,9 +1856,6 @@ class R1_A7_ArmController:
         logger_mp.info("[R1_A7_ArmController] head return to zero OK!")
 
     def _ctrl_motor_state(self):
-        if self.motion_mode:
-            self.msg.motor_cmd[R1_A7_JointIndex.kNotUsedJoint0].q = 1.0;
-
         while True:
             start_time = time.time()
 
@@ -1902,10 +1923,6 @@ class R1_A7_ArmController:
         while current_attempts < max_attempts:
             current_q = self.get_current_dual_arm_q()
             if np.all(np.abs(current_q) < tolerance):
-                if self.motion_mode:
-                    for weight in np.linspace(1, 0, num=101):
-                        self.msg.motor_cmd[R1_A7_JointIndex.kNotUsedJoint0].q = weight;
-                        time.sleep(0.02)
                 logger_mp.info("[R1_A7_ArmController] both arms have reached the home position.")
                 break
             current_attempts += 1
