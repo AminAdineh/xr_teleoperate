@@ -106,6 +106,7 @@ class G1_29_ArmController:
         self.lowstate_subscriber = ChannelSubscriber(kTopicLowState, hg_LowState)
         self.lowstate_subscriber.Init()
         self.lowstate_buffer = DataBuffer()
+        self.mode_machine = None
         self.lowstate_sub_ready = False
 
         # initialize subscribe thread
@@ -163,6 +164,7 @@ class G1_29_ArmController:
                     lowstate.motor_state[id].q  = msg.motor_state[id].q
                     lowstate.motor_state[id].dq = msg.motor_state[id].dq
                 self.lowstate_buffer.SetData(lowstate)
+                self.mode_machine = msg.mode_machine
                 self.lowstate_sub_ready = True
             time.sleep(0.002)
 
@@ -216,7 +218,9 @@ class G1_29_ArmController:
 
     def get_mode_machine(self):
         '''Return current dds mode machine.'''
-        return self.lowstate_subscriber.Read().mode_machine
+        if self.mode_machine is None:
+            raise RuntimeError("G1 low state is not ready.")
+        return self.mode_machine
     
     def get_current_motor_q(self):
         '''Return current state q of all body motors.'''
@@ -355,6 +359,332 @@ class G1_29_JointIndex(IntEnum):
     kNotUsedJoint4 = 33
     kNotUsedJoint5 = 34
 
+class G1_29_Internal_Dex1_JointIndex(IntEnum):
+    kLeftDex1_1 = 31
+    kRightDex1_1 = 33
+
+class G1_29_Arm_Internal_Dex1_Controller:
+    BODY_MOTOR_COUNT = 29
+    DELTA_GRIPPER_CMD = 0.18
+    THUMB_INDEX_DISTANCE = (5.0, 7.0)
+    MAPPED_GRIPPER_RANGE = (0.0, 5.4)
+
+    def __init__(self, left_gripper_value_in, right_gripper_value_in,
+                 dual_gripper_data_lock = None, dual_gripper_state_out = None,
+                 dual_gripper_action_out = None, simulation_mode = False,
+                 xr_motion_data_ready_in = None, motion_mode = False):
+        logger_mp.info("Initialize G1_29_Arm_Internal_Dex1_Controller...")
+
+        if motion_mode:
+            raise ValueError("Internal Dex1 does not currently support motion mode.")
+
+        self.left_gripper_value_in = left_gripper_value_in
+        self.right_gripper_value_in = right_gripper_value_in
+        self.dual_gripper_data_lock = dual_gripper_data_lock
+        self.dual_gripper_state_out = dual_gripper_state_out
+        self.dual_gripper_action_out = dual_gripper_action_out
+        self.xr_motion_data_ready_in = xr_motion_data_ready_in
+
+        self.left_gripper_index = G1_29_Internal_Dex1_JointIndex.kLeftDex1_1.value
+        self.right_gripper_index = G1_29_Internal_Dex1_JointIndex.kRightDex1_1.value
+        self.gripper_kp = 5.0
+        self.gripper_kd = 0.05
+
+        self.q_target = np.zeros(14)
+        self.tauff_target = np.zeros(14)
+        self.gripper_q_target = np.zeros(2)
+        self.motion_mode = motion_mode
+        self.simulation_mode = simulation_mode
+
+        self.kp_high = 300.0
+        self.kd_high = 3.0
+        self.kp_low = 80.0
+        self.kd_low = 3.0
+        self.kp_wrist = 40.0
+        self.kd_wrist = 1.5
+
+        self.all_motor_q = None
+        self.arm_velocity_limit = 20.0
+        self.control_dt = 1.0 / 250.0
+        self._speed_gradual_max = False
+        self._gradual_start_time = None
+        self._gradual_time = None
+        self.running = True
+        self.ctrl_lock = threading.Lock()
+
+        if simulation_mode:
+            self.gripper_smooth_filter = None
+        else:
+            from teleop.utils.weighted_moving_filter import WeightedMovingFilter
+            self.gripper_smooth_filter = WeightedMovingFilter(np.array([0.5, 0.3, 0.2]), 2)
+
+        self.lowcmd_publisher = ChannelPublisher(kTopicLowCommand_Debug, hg_LowCmd)
+        self.lowcmd_publisher.Init()
+        self.lowstate_subscriber = ChannelSubscriber(kTopicLowState, hg_LowState)
+        self.lowstate_subscriber.Init()
+        self.lowstate_buffer = DataBuffer()
+        self.mode_machine = None
+        self.lowstate_sub_ready = False
+
+        self.subscribe_thread = threading.Thread(target=self._subscribe_motor_state)
+        self.subscribe_thread.daemon = True
+        self.subscribe_thread.start()
+
+        wait_for_dds(lambda: self.lowstate_sub_ready, "G1_29_Arm_Internal_Dex1_Controller")
+
+        self.crc = CRC()
+        self.msg = unitree_hg_msg_dds__LowCmd_()
+        self.msg.mode_pr = 0
+        self.msg.mode_machine = self.get_mode_machine()
+        self.all_motor_q = self.get_current_motor_q()
+
+        self._configure_motor_commands()
+
+        self.publish_thread = threading.Thread(target=self._ctrl_motor_state)
+        self.publish_thread.daemon = True
+        self.publish_thread.start()
+
+        logger_mp.info("Initialize G1_29_Arm_Internal_Dex1_Controller OK!")
+
+    def _ctrl_motor_state(self):
+        while self.running:
+            start_time = time.time()
+
+            with self.ctrl_lock:
+                arm_q_target = self.q_target
+                arm_tauff_target = self.tauff_target
+
+            if self.simulation_mode:
+                cliped_arm_q_target = arm_q_target
+            else:
+                cliped_arm_q_target = self.clip_arm_q_target(
+                    arm_q_target,
+                    velocity_limit=self.arm_velocity_limit,
+                )
+
+            for idx, id in enumerate(G1_29_JointArmIndex):
+                self.msg.motor_cmd[id].q = cliped_arm_q_target[idx]
+                self.msg.motor_cmd[id].dq = 0
+                self.msg.motor_cmd[id].tau = arm_tauff_target[idx]
+
+            self._update_internal_dex1_motor_commands()
+
+            self.msg.crc = self.crc.Crc(self.msg)
+            self.lowcmd_publisher.Write(self.msg)
+
+            if self._speed_gradual_max is True:
+                t_elapsed = start_time - self._gradual_start_time
+                self.arm_velocity_limit = 20.0 + (10.0 * min(1.0, t_elapsed / 5.0))
+
+            sleep_time = max(0, self.control_dt - (time.time() - start_time))
+            time.sleep(sleep_time)
+
+    def _subscribe_motor_state(self):
+        while self.running:
+            msg = self.lowstate_subscriber.Read()
+            if msg is not None:
+                lowstate = G1_29_LowState()
+                for id in range(G1_29_Num_Motors):
+                    lowstate.motor_state[id].q = msg.motor_state[id].q
+                    lowstate.motor_state[id].dq = msg.motor_state[id].dq
+                self.lowstate_buffer.SetData(lowstate)
+                self.mode_machine = msg.mode_machine
+                self.lowstate_sub_ready = True
+            time.sleep(0.002)
+
+    def _configure_motor_commands(self):
+        self.gripper_q_target = self.get_current_dual_gripper_q()
+        arm_indices = {member.value for member in G1_29_JointArmIndex}
+        gripper_indices = {self.left_gripper_index, self.right_gripper_index}
+
+        for id in G1_29_JointIndex:
+            cmd = self.msg.motor_cmd[id]
+            cmd.q = self.all_motor_q[id]
+            cmd.dq = 0.0
+            cmd.tau = 0.0
+            if id.value in gripper_indices:
+                cmd.mode = 1
+                cmd.kp = self.gripper_kp
+                cmd.kd = self.gripper_kd
+            elif id.value >= self.BODY_MOTOR_COUNT:
+                cmd.mode = 0
+                cmd.kp = 0.0
+                cmd.kd = 0.0
+            elif id.value in arm_indices:
+                cmd.mode = 1
+                if self._Is_wrist_motor(id):
+                    cmd.kp = self.kp_wrist
+                    cmd.kd = self.kd_wrist
+                else:
+                    cmd.kp = self.kp_low
+                    cmd.kd = self.kd_low
+            else:
+                cmd.mode = 1
+                if self._Is_weak_motor(id):
+                    cmd.kp = self.kp_low
+                    cmd.kd = self.kd_low
+                else:
+                    cmd.kp = self.kp_high
+                    cmd.kd = self.kd_high
+
+        logger_mp.debug(f"Current all body motor state q:\n{self.all_motor_q}\n")
+        logger_mp.debug(f"Current two arms motor state q:\n{self.get_current_dual_arm_q()}\n")
+        logger_mp.info(f"Current internal Dex1 q: {self.gripper_q_target}")
+
+    def _update_internal_dex1_motor_commands(self):
+        with self.left_gripper_value_in.get_lock():
+            left_gripper_value = self.left_gripper_value_in.value
+        with self.right_gripper_value_in.get_lock():
+            right_gripper_value = self.right_gripper_value_in.value
+
+        if self.xr_motion_data_ready_in is None:
+            xr_motion_data_ready = True
+        else:
+            with self.xr_motion_data_ready_in.get_lock():
+                xr_motion_data_ready = self.xr_motion_data_ready_in.value
+
+        gripper_state = self.get_current_dual_gripper_q()
+        if xr_motion_data_ready:
+            gripper_q_target = np.array([
+                np.interp(left_gripper_value, self.THUMB_INDEX_DISTANCE, self.MAPPED_GRIPPER_RANGE),
+                np.interp(right_gripper_value, self.THUMB_INDEX_DISTANCE, self.MAPPED_GRIPPER_RANGE),
+            ])
+        else:
+            gripper_q_target = gripper_state.copy()
+
+        with self.ctrl_lock:
+            self.gripper_q_target = gripper_q_target
+
+        if self.simulation_mode:
+            gripper_q_cmd = gripper_q_target
+        else:
+            gripper_q_cmd = np.clip(
+                gripper_q_target,
+                gripper_state - self.DELTA_GRIPPER_CMD,
+                gripper_state + self.DELTA_GRIPPER_CMD,
+            )
+
+        if self.gripper_smooth_filter is not None:
+            self.gripper_smooth_filter.add_data(gripper_q_cmd)
+            gripper_q_cmd = self.gripper_smooth_filter.filtered_data
+
+        for idx, id in enumerate((self.left_gripper_index, self.right_gripper_index)):
+            cmd = self.msg.motor_cmd[id]
+            cmd.mode = 1
+            cmd.q = gripper_q_cmd[idx]
+            cmd.dq = 0.0
+            cmd.tau = 0.0
+            cmd.kp = self.gripper_kp
+            cmd.kd = self.gripper_kd
+
+        if self.dual_gripper_state_out is not None and self.dual_gripper_action_out is not None:
+            if self.dual_gripper_data_lock is None:
+                self._write_gripper_output(gripper_state, gripper_q_cmd)
+            else:
+                with self.dual_gripper_data_lock:
+                    self._write_gripper_output(gripper_state, gripper_q_cmd)
+
+    def _write_gripper_output(self, state, action):
+        self.dual_gripper_state_out[:] = state
+        self.dual_gripper_action_out[:] = action
+
+    def get_current_dual_gripper_q(self):
+        lowstate = self.lowstate_buffer.GetData()
+        return np.array([
+            lowstate.motor_state[self.left_gripper_index].q,
+            lowstate.motor_state[self.right_gripper_index].q,
+        ])
+
+    def clip_arm_q_target(self, target_q, velocity_limit):
+        current_q = self.get_current_dual_arm_q()
+        delta = target_q - current_q
+        motion_scale = np.max(np.abs(delta)) / (velocity_limit * self.control_dt)
+        return current_q + delta / max(motion_scale, 1.0)
+
+    def ctrl_dual_arm(self, q_target, tauff_target):
+        """Set target position and feed-forward torque for both arms."""
+        with self.ctrl_lock:
+            self.q_target = q_target
+            self.tauff_target = tauff_target
+
+    def get_mode_machine(self):
+        if self.mode_machine is None:
+            raise RuntimeError("G1 low state is not ready.")
+        return self.mode_machine
+
+    def get_current_motor_q(self):
+        lowstate = self.lowstate_buffer.GetData()
+        return np.array([
+            lowstate.motor_state[id].q
+            for id in G1_29_JointIndex
+        ])
+
+    def get_current_dual_arm_q(self):
+        lowstate = self.lowstate_buffer.GetData()
+        return np.array([
+            lowstate.motor_state[id].q
+            for id in G1_29_JointArmIndex
+        ])
+
+    def get_current_dual_arm_dq(self):
+        lowstate = self.lowstate_buffer.GetData()
+        return np.array([
+            lowstate.motor_state[id].dq
+            for id in G1_29_JointArmIndex
+        ])
+
+    def ctrl_dual_arm_go_home(self):
+        logger_mp.info("[G1_29_Arm_Internal_Dex1_Controller] ctrl_dual_arm_go_home start...")
+        max_attempts = 100
+        current_attempts = 0
+        with self.ctrl_lock:
+            self.q_target = np.zeros(14)
+
+        tolerance = 0.05
+        while current_attempts < max_attempts:
+            if np.all(np.abs(self.get_current_dual_arm_q()) < tolerance):
+                logger_mp.info(
+                    "[G1_29_Arm_Internal_Dex1_Controller] both arms have reached the home position."
+                )
+                break
+            current_attempts += 1
+            time.sleep(0.05)
+
+    def speed_gradual_max(self, t = 5.0):
+        self._gradual_start_time = time.time()
+        self._gradual_time = t
+        self._speed_gradual_max = True
+
+    def speed_instant_max(self):
+        self.arm_velocity_limit = 30.0
+
+    def _Is_weak_motor(self, motor_index):
+        weak_motors = [
+            G1_29_JointIndex.kLeftAnklePitch.value,
+            G1_29_JointIndex.kRightAnklePitch.value,
+            G1_29_JointIndex.kLeftShoulderPitch.value,
+            G1_29_JointIndex.kLeftShoulderRoll.value,
+            G1_29_JointIndex.kLeftShoulderYaw.value,
+            G1_29_JointIndex.kLeftElbow.value,
+            G1_29_JointIndex.kRightShoulderPitch.value,
+            G1_29_JointIndex.kRightShoulderRoll.value,
+            G1_29_JointIndex.kRightShoulderYaw.value,
+            G1_29_JointIndex.kRightElbow.value,
+        ]
+        return motor_index.value in weak_motors
+
+    def _Is_wrist_motor(self, motor_index):
+        wrist_motors = [
+            G1_29_JointIndex.kLeftWristRoll.value,
+            G1_29_JointIndex.kLeftWristPitch.value,
+            G1_29_JointIndex.kLeftWristyaw.value,
+            G1_29_JointIndex.kRightWristRoll.value,
+            G1_29_JointIndex.kRightWristPitch.value,
+            G1_29_JointIndex.kRightWristYaw.value,
+        ]
+        return motor_index.value in wrist_motors
+
+
 class G1_23_ArmController:
     def __init__(self, motion_mode = False, simulation_mode = False):
         self.simulation_mode = simulation_mode
@@ -388,6 +718,7 @@ class G1_23_ArmController:
         self.lowstate_subscriber = ChannelSubscriber(kTopicLowState, hg_LowState)
         self.lowstate_subscriber.Init()
         self.lowstate_buffer = DataBuffer()
+        self.mode_machine = None
         self.lowstate_sub_ready = False
 
         # initialize subscribe thread
@@ -445,6 +776,7 @@ class G1_23_ArmController:
                     lowstate.motor_state[id].q  = msg.motor_state[id].q
                     lowstate.motor_state[id].dq = msg.motor_state[id].dq
                 self.lowstate_buffer.SetData(lowstate)
+                self.mode_machine = msg.mode_machine
                 self.lowstate_sub_ready = True
             time.sleep(0.002)
 
@@ -498,7 +830,9 @@ class G1_23_ArmController:
 
     def get_mode_machine(self):
         '''Return current dds mode machine.'''
-        return self.lowstate_subscriber.Read().mode_machine
+        if self.mode_machine is None:
+            raise RuntimeError("G1 low state is not ready.")
+        return self.mode_machine
     
     def get_current_motor_q(self):
         '''Return current state q of all body motors.'''
@@ -662,6 +996,7 @@ class H1_2_ArmController:
         self.lowstate_subscriber = ChannelSubscriber(kTopicLowState, hg_LowState)
         self.lowstate_subscriber.Init()
         self.lowstate_buffer = DataBuffer()
+        self.mode_machine = None
         self.lowstate_sub_ready = False
 
         # initialize subscribe thread
@@ -719,6 +1054,7 @@ class H1_2_ArmController:
                     lowstate.motor_state[id].q  = msg.motor_state[id].q
                     lowstate.motor_state[id].dq = msg.motor_state[id].dq
                 self.lowstate_buffer.SetData(lowstate)
+                self.mode_machine = msg.mode_machine
                 self.lowstate_sub_ready = True
             time.sleep(0.002)
 
@@ -772,7 +1108,9 @@ class H1_2_ArmController:
 
     def get_mode_machine(self):
         '''Return current dds mode machine.'''
-        return self.lowstate_subscriber.Read().mode_machine
+        if self.mode_machine is None:
+            raise RuntimeError("H1-2 low state is not ready.")
+        return self.mode_machine
     
     def get_current_motor_q(self):
         '''Return current state q of all body motors.'''
@@ -1159,6 +1497,7 @@ class H2_ArmController:
         self.lowstate_subscriber = ChannelSubscriber(kTopicLowState, hg_LowState)
         self.lowstate_subscriber.Init()
         self.lowstate_buffer = DataBuffer()
+        self.mode_machine = None
         self.lowstate_sub_ready = False
 
         # initialize subscribe thread
@@ -1219,6 +1558,7 @@ class H2_ArmController:
                     lowstate.motor_state[id].q = msg.motor_state[id].q
                     lowstate.motor_state[id].dq = msg.motor_state[id].dq
                 self.lowstate_buffer.SetData(lowstate)
+                self.mode_machine = msg.mode_machine
                 self.lowstate_sub_ready = True
             time.sleep(0.002)
 
@@ -1270,7 +1610,9 @@ class H2_ArmController:
 
     def get_mode_machine(self):
         """Return current dds mode machine."""
-        return self.lowstate_subscriber.Read().mode_machine
+        if self.mode_machine is None:
+            raise RuntimeError("H2 low state is not ready.")
+        return self.mode_machine
 
     def get_current_motor_q(self):
         """Return current state q of all body motors."""
@@ -1441,6 +1783,7 @@ class R1_A5_ArmController:
         self.lowstate_subscriber = ChannelSubscriber(kTopicLowState, hg_LowState)
         self.lowstate_subscriber.Init()
         self.lowstate_buffer = DataBuffer()
+        self.mode_machine = None
         self.lowstate_sub_ready = False
 
         # initialize subscribe thread
@@ -1532,6 +1875,7 @@ class R1_A5_ArmController:
                     lowstate.motor_state[id].q  = msg.motor_state[id].q
                     lowstate.motor_state[id].dq = msg.motor_state[id].dq
                 self.lowstate_buffer.SetData(lowstate)
+                self.mode_machine = msg.mode_machine
                 self.lowstate_sub_ready = True
             time.sleep(0.002)
 
@@ -1594,7 +1938,9 @@ class R1_A5_ArmController:
 
     def get_mode_machine(self):
         '''Return current dds mode machine.'''
-        return self.lowstate_subscriber.Read().mode_machine
+        if self.mode_machine is None:
+            raise RuntimeError("R1-A5 low state is not ready.")
+        return self.mode_machine
 
     def get_current_motor_q(self):
         '''Return current state q of all body motors.'''
@@ -1767,6 +2113,7 @@ class R1_A7_ArmController:
         self.lowstate_subscriber = ChannelSubscriber(kTopicLowState, hg_LowState)
         self.lowstate_subscriber.Init()
         self.lowstate_buffer = DataBuffer()
+        self.mode_machine = None
         self.lowstate_sub_ready = False
 
         # initialize subscribe thread
@@ -1831,6 +2178,7 @@ class R1_A7_ArmController:
                     lowstate.motor_state[id].q  = msg.motor_state[id].q
                     lowstate.motor_state[id].dq = msg.motor_state[id].dq
                 self.lowstate_buffer.SetData(lowstate)
+                self.mode_machine = msg.mode_machine
                 self.lowstate_sub_ready = True
             time.sleep(0.002)
 
@@ -1893,7 +2241,9 @@ class R1_A7_ArmController:
 
     def get_mode_machine(self):
         '''Return current dds mode machine.'''
-        return self.lowstate_subscriber.Read().mode_machine
+        if self.mode_machine is None:
+            raise RuntimeError("R1-A7 low state is not ready.")
+        return self.mode_machine
 
     def get_current_motor_q(self):
         '''Return current state q of all body motors.'''

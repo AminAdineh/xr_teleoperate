@@ -237,7 +237,7 @@ build  cert.pem  key.pem  LICENSE  pyproject.toml  README.md  rootCA.key  rootCA
 |    `--input-mode`     |          选择 XR 输入模式（通过什么方式控制机器人）          |   `hand`（**手势跟踪**）<br />`controller`（**手柄跟踪**）   |      `hand`       |
 |   `--display-mode`    |        选择 XR 显示模式（通过什么方式查看机器人视角）        | `immersive`（沉浸式）<br />`ego`（通透+第一人称小窗）<br />`pass-through`（通透） |    `immersive`    |
 |        `--arm`        |            选择机器人设备类型（可参考 0. 📖 介绍）            | `G1_29`<br />`G1_23`<br />`H1_2`<br />`H1`<br />`H2`<br />`R1_A5`<br />`R1_A7` |      `G1_29`      |
-|        `--ee`         |       选择手臂的末端执行器设备类型（可参考 0. 📖 介绍）       | `dex1`<br />`dex3`<br />`inspire_ftp`<br />`inspire_dfx`<br />`brainco` |     无默认值      |
+|        `--ee`         |       选择手臂的末端执行器设备类型（可参考 0. 📖 介绍）       | `dex1`<br />`dex1_internal`<br />`dex3`<br />`inspire_ftp`<br />`inspire_dfx`<br />`brainco` |     无默认值      |
 |   `--img-server-ip`   | 设置图像服务器的 IP 地址，用于接收图像服务流、配置 WebRTC 信令服务地址 |                         `IPv4` 地址                          | `192.168.123.164` |
 | `--network-interface` |                设置 cyclonedds 通信的网卡接口                |                           网卡名称                           |      `None`       |
 
@@ -488,6 +488,8 @@ unitree@PC2:~/DFX_inspire_service/build$ ./hand_example
 ## 3.4 ✋ Unitree Dex1_1 服务（可选）
 
 请参考[仓库文档](https://github.com/unitreerobotics/dex1_1_service)。
+
+对于安装内走线 Dex1 夹爪的 G1-29，请使用 `--arm G1_29 --ee dex1_internal`。该模式通过 G1 低层命令中的 31、33 号电机分别控制左右夹爪，不需要启动外置 Dex1 服务。尚未验证能否通过 `rt/arm_sdk` 控制内走线夹爪，目前不支持同时传入 `--motion`。
 
 
 ## 3.5 🚀 启动遥操

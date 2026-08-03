@@ -14,7 +14,7 @@ sys.path.append(parent_dir)
 
 from unitree_sdk2py.core.channel import ChannelFactoryInitialize # dds 
 from televuer import TeleVuerWrapper
-from teleop.robot_control.robot_arm import G1_29_ArmController, G1_23_ArmController, H1_2_ArmController, H1_ArmController, H2_ArmController, R1_A5_ArmController, R1_A7_ArmController
+from teleop.robot_control.robot_arm import G1_29_ArmController, G1_29_Arm_Internal_Dex1_Controller, G1_23_ArmController, H1_2_ArmController, H1_ArmController, H2_ArmController, R1_A5_ArmController, R1_A7_ArmController
 from teleop.robot_control.robot_arm_ik import G1_29_ArmIK, G1_23_ArmIK, H1_2_ArmIK, H1_ArmIK, H2_ArmIK, R1_A5_ArmIK, R1_A7_ArmIK
 from teleimager.image_client import ImageClient
 from teleop.utils.episode_writer import EpisodeWriter
@@ -77,7 +77,7 @@ if __name__ == '__main__':
     parser.add_argument('--input-mode', type=str, choices=['hand', 'controller'], default='hand', help='Select XR device input tracking source')
     parser.add_argument('--display-mode', type=str, choices=['immersive', 'ego', 'pass-through'], default='immersive', help='Select XR device display mode')
     parser.add_argument('--arm', type=str, choices=['G1_29', 'G1_23', 'H1_2', 'H1', 'H2', 'R1_A5', 'R1_A7'], default='G1_29', help='Select arm controller')
-    parser.add_argument('--ee', type=str, choices=['dex1', 'dex3', 'inspire_ftp', 'inspire_dfx', 'brainco'], help='Select end effector controller')
+    parser.add_argument('--ee', type=str, choices=['dex1', 'dex1_internal', 'dex3', 'inspire_ftp', 'inspire_dfx', 'brainco'], help='Select end effector controller')
     # network parameters
     parser.add_argument('--img-server-ip', type=str, default='192.168.123.164', help='IP address of image server, used by teleimager and televuer')
     parser.add_argument('--network-interface', type=str, default=None, help='Network interface for dds communication, e.g., eth0, wlan0. If None, use default interface.')
@@ -97,6 +97,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     logger_mp.debug(f"args: {args}")
+
+    if args.ee == "dex1_internal" and args.motion:
+        parser.error("--ee dex1_internal does not currently support --motion.")
 
     try:
         # setup dds communication domains id
@@ -145,10 +148,25 @@ if __name__ == '__main__':
             status, result = motion_switcher.Enter_Debug_Mode()
             logger_mp.info(f"Enter debug mode: {'Success' if status == 0 else 'Failed'}")
 
+        xr_motion_data_ready = Value('b', False, lock=True)        # [input] whether XR hand/controller motion data has arrived
+
+        if args.ee == "dex1_internal":
+            if args.arm != "G1_29":
+                raise ValueError("dex1_internal is only supported with --arm G1_29.")
+            left_gripper_value = Value('d', 0.0, lock=True)        # [input]
+            right_gripper_value = Value('d', 0.0, lock=True)       # [input]
+            dual_gripper_data_lock = Lock()
+            dual_gripper_state_array = Array('d', 2, lock=False)   # current left, right gripper state(2) data.
+            dual_gripper_action_array = Array('d', 2, lock=False)  # current left, right gripper action(2) data.
+
         # arm
         if args.arm == "G1_29":
             arm_ik = G1_29_ArmIK()
-            arm_ctrl = G1_29_ArmController(motion_mode=args.motion, simulation_mode=args.sim)
+            if args.ee == "dex1_internal":
+                arm_ctrl = G1_29_Arm_Internal_Dex1_Controller(left_gripper_value, right_gripper_value, dual_gripper_data_lock, dual_gripper_state_array,
+                                                              dual_gripper_action_array, motion_mode=args.motion, simulation_mode=args.sim, xr_motion_data_ready_in=xr_motion_data_ready)
+            else:
+                arm_ctrl = G1_29_ArmController(motion_mode=args.motion, simulation_mode=args.sim)
         elif args.arm == "G1_23":
             arm_ik = G1_23_ArmIK()
             arm_ctrl = G1_23_ArmController(motion_mode=args.motion, simulation_mode=args.sim)
@@ -169,7 +187,6 @@ if __name__ == '__main__':
             arm_ctrl = R1_A7_ArmController(motion_mode=args.motion, simulation_mode=args.sim)
 
         # end-effector
-        xr_motion_data_ready = Value('b', False, lock=True)        # [input] whether XR hand/controller motion data has arrived
         if args.ee in ("dex3", "inspire_ftp", "inspire_dfx") and args.input_mode == "controller":
             raise ValueError(f"{args.ee} does not support controller input mode.")
         elif args.ee == "dex3":
@@ -333,12 +350,12 @@ if __name__ == '__main__':
                     right_gripper_trigger_in.value = tele_data.right_ctrl_triggerValue
                 with right_gripper_squeeze_in.get_lock():
                     right_gripper_squeeze_in.value = tele_data.right_ctrl_squeezeValue
-            elif args.ee == "dex1" and args.input_mode == "controller":
+            elif args.ee in ("dex1", "dex1_internal") and args.input_mode == "controller":
                 with left_gripper_value.get_lock():
                     left_gripper_value.value = tele_data.left_ctrl_triggerValue
                 with right_gripper_value.get_lock():
                     right_gripper_value.value = tele_data.right_ctrl_triggerValue
-            elif args.ee == "dex1" and args.input_mode == "hand":
+            elif args.ee in ("dex1", "dex1_internal") and args.input_mode == "hand":
                 with left_gripper_value.get_lock():
                     left_gripper_value.value = tele_data.left_hand_pinchValue
                 with right_gripper_value.get_lock():
@@ -385,7 +402,7 @@ if __name__ == '__main__':
                         right_hand_action = dual_hand_action_array[-7:]
                         current_body_state = []
                         current_body_action = []
-                elif args.ee == "dex1" and args.input_mode == "hand":
+                elif args.ee in ("dex1", "dex1_internal") and args.input_mode == "hand":
                     with dual_gripper_data_lock:
                         left_ee_state = [dual_gripper_state_array[0]]
                         right_ee_state = [dual_gripper_state_array[1]]
@@ -393,7 +410,7 @@ if __name__ == '__main__':
                         right_hand_action = [dual_gripper_action_array[1]]
                         current_body_state = []
                         current_body_action = []
-                elif args.ee == "dex1" and args.input_mode == "controller":
+                elif args.ee in ("dex1", "dex1_internal") and args.input_mode == "controller":
                     with dual_gripper_data_lock:
                         left_ee_state = [dual_gripper_state_array[0]]
                         right_ee_state = [dual_gripper_state_array[1]]

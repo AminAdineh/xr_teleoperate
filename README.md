@@ -225,7 +225,7 @@ build  cert.pem  key.pem  LICENSE  pyproject.toml  README.md  rootCA.key  rootCA
 |    `--input-mode`     |       Choose XR input mode (how to control the robot)        |   `hand` (hand tracking)`controller` (controller tracking)   |      `hand`       |
 |   `--display-mode`    |  Choose XR display mode (how to view the robot perspective)  | `immersive` (immersive)`ego` (pass-through + small first-person window)`pass-through` (pass-through only) |    `immersive`    |
 |        `--arm`        |      Select the robot arm type (see 0. 📖 Introduction)       | `G1_29` `G1_23` `H1_2` `H1` `H2` `R1_A5` `R1_A7` |      `G1_29`      |
-|        `--ee`         | Select the end-effector type of the arm (see 0. 📖 Introduction) |     `dex1` `dex3` `inspire_ftp` `inspire_dfx` `brainco`      |       None        |
+|        `--ee`         | Select the end-effector type of the arm (see 0. 📖 Introduction) | `dex1` `dex1_internal` `dex3` `inspire_ftp` `inspire_dfx` `brainco` |       None        |
 |   `--img-server-ip`   | Set the image server IP address for receiving image streams and configuring WebRTC signaling |                        `IPv4` address                        | `192.168.123.164` |
 | `--network-interface` |    Set the network interface for CycloneDDS communication    |                    Network Interface Name                    |      `None`       |
 
@@ -460,6 +460,8 @@ Please refer to the [Repo README](https://github.com/unitreerobotics/brainco_han
 ## 3.4 ✋ Unitree Dex1_1 Service (Optional)
 
 Please refer to the [Repo README](https://github.com/unitreerobotics/dex1_1_service) for setup instructions.
+
+For a G1-29 equipped with internally wired Dex1 grippers, use `--arm G1_29 --ee dex1_internal`. This mode controls the left and right grippers through motor indices 31 and 33 in the G1 low-level command, so there is no need to start the external Dex1 service. Whether the internally wired grippers can be controlled through `rt/arm_sdk` has not yet been verified; therefore, using `--motion` at the same time is currently unsupported.
 
 ## 3.5 🚀 Launch
 
