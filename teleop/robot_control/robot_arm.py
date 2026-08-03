@@ -1701,6 +1701,8 @@ class R1_A5_ArmController:
         self.kd_high = 3.0
         self.kp_low = 50.0
         self.kd_low = 2.0
+        self.kp_medium = 40.0
+        self.kd_medium = 2.0
         self.kp_wrist = 30.0
         self.kd_wrist = 2.0
         self.kp_head = 15.0
@@ -1731,7 +1733,7 @@ class R1_A5_ArmController:
         # initialize hg's lowcmd msg
         self.crc = CRC()
         self.msg = unitree_hg_msg_dds__LowCmd_()
-        # R1 arm_sdk uses mode_pr as a percentage weight.  This differs from
+        # R1/R1-A5 arm_sdk uses mode_pr as a percentage weight.  This differs from
         # G1/H1_2, which use an otherwise notused joint command as the weight.
         self.msg.mode_pr = 100 if self.motion_mode else 0
         self.msg.mode_machine = self.get_mode_machine()
@@ -1742,9 +1744,14 @@ class R1_A5_ArmController:
         logger_mp.info("Initialize R1 A5 joint commands...")
         arm_indices = set(member.value for member in R1_A5_JointArmIndex)
         head_indices = set(member.value for member in R1_A5_JointHeadIndex)
-        arm_sdk_indices = arm_indices | head_indices | {R1_A5_JointIndex.kWaistYaw.value}
+        # Slot 12 is unused on R1-A5 and is waist roll on R1; slot 13 is waist
+        # yaw on both. Neither waist joint is updated by teleoperation.
+        waist_indices = {
+            R1_A5_JointIndex.kWaistRollNotUsed.value,
+            R1_A5_JointIndex.kWaistYaw.value,
+        }
+        arm_sdk_indices = arm_indices | head_indices | waist_indices
         for id in R1_A5_JointIndex:
-            # rt/arm_sdk only consumes the 13 joints declared by R1 ArmSdk.
             # rt/lowcmd still needs a complete low-level command.
             if self.motion_mode and id.value not in arm_sdk_indices:
                 continue
@@ -1753,13 +1760,16 @@ class R1_A5_ArmController:
                 if self._Is_wrist_motor(id):
                     self.msg.motor_cmd[id].kp = self.kp_wrist
                     self.msg.motor_cmd[id].kd = self.kd_wrist
+                elif self._Is_medium_arm_motor(id):
+                    self.msg.motor_cmd[id].kp = self.kp_medium
+                    self.msg.motor_cmd[id].kd = self.kd_medium
                 else:
                     self.msg.motor_cmd[id].kp = self.kp_low
                     self.msg.motor_cmd[id].kd = self.kd_low
             elif id.value in head_indices:
                 self.msg.motor_cmd[id].kp = self.kp_head
                 self.msg.motor_cmd[id].kd = self.kd_head
-            elif id == R1_A5_JointIndex.kWaistYaw:
+            elif id.value in waist_indices:
                 self.msg.motor_cmd[id].kp = self.kp_low
                 self.msg.motor_cmd[id].kd = self.kd_high
             else:
@@ -1774,8 +1784,8 @@ class R1_A5_ArmController:
             self.msg.motor_cmd[id].tau = 0.0
         logger_mp.info("R1 A5 joint commands initialized.")
 
-        # head pitch/yaw gradually return to zero at startup
-        self.ctrl_head_go_home()
+        # Head and available waist joints gradually return to zero at startup.
+        self.ctrl_head_and_waist_go_home()
 
         # initialize publish thread
         self.publish_thread = threading.Thread(target=self._ctrl_motor_state)
@@ -1821,19 +1831,28 @@ class R1_A5_ArmController:
         cliped_arm_q_target = current_q + delta / max(motion_scale, 1.0)
         return cliped_arm_q_target
 
-    def ctrl_head_go_home(self, duration = 3.0):
-        '''At startup, linearly move head pitch/yaw from their current position to zero over `duration` seconds.'''
-        logger_mp.info("[R1_A5_ArmController] head returning to zero...")
-        start_q = self.get_current_head_q()
+    def ctrl_head_and_waist_go_home(self, duration = 3.0):
+        '''Linearly move the head and available waist joints to zero at startup.'''
+        logger_mp.info("[R1_A5_ArmController] head and waist returning to zero...")
+        waist_indices = (
+            R1_A5_JointIndex.kWaistRollNotUsed,
+            R1_A5_JointIndex.kWaistYaw,
+        )
+        start_head_q = self.get_current_head_q()
+        start_waist_q = self.all_motor_q[[id.value for id in waist_indices]]
         steps = max(1, int(duration / self.control_dt))
         for step in range(1, steps + 1):
-            head_q = start_q * (1.0 - step / steps)   # linear ramp to zero
+            scale = 1.0 - step / steps
+            head_q = start_head_q * scale
+            waist_q = start_waist_q * scale
             for idx, id in enumerate(R1_A5_JointHeadIndex):
                 self.msg.motor_cmd[id].q = head_q[idx]
+            for idx, id in enumerate(waist_indices):
+                self.msg.motor_cmd[id].q = waist_q[idx]
             self.msg.crc = self.crc.Crc(self.msg)
             self.lowcmd_publisher.Write(self.msg)
             time.sleep(self.control_dt)
-        logger_mp.info("[R1_A5_ArmController] head return to zero OK!")
+        logger_mp.info("[R1_A5_ArmController] head and waist return to zero OK!")
 
     def _ctrl_motor_state(self):
         while True:
@@ -1943,6 +1962,15 @@ class R1_A5_ArmController:
         ]
         return motor_index.value in wrist_motors
 
+    def _Is_medium_arm_motor(self, motor_index):
+        medium_arm_motors = [
+            R1_A5_JointIndex.kLeftShoulderYaw.value,
+            R1_A5_JointIndex.kLeftElbow.value,
+            R1_A5_JointIndex.kRightShoulderYaw.value,
+            R1_A5_JointIndex.kRightElbow.value,
+        ]
+        return motor_index.value in medium_arm_motors
+
 class R1_A5_JointArmIndex(IntEnum):
     # Left arm
     kLeftShoulderPitch = 15
@@ -1979,8 +2007,8 @@ class R1_A5_JointIndex(IntEnum):
     kRightAnklePitch = 10
     kRightAnkleRoll = 11
 
-    kWaistYaw = 12
-    kWaistRollNotUsed = 13
+    kWaistRollNotUsed = 12
+    kWaistYaw = 13
     kWaistPitchNotUsed = 14
 
     # Left arm
@@ -2023,6 +2051,8 @@ class R1_A7_ArmController:
         self.kd_high = 3.0
         self.kp_low = 50.0
         self.kd_low = 2.0
+        self.kp_medium = 40.0
+        self.kd_medium = 2.0
         self.kp_wrist = 30.0
         self.kd_wrist = 2.0
         self.kp_head = 15.0
@@ -2060,18 +2090,28 @@ class R1_A7_ArmController:
 
         arm_indices = set(member.value for member in R1_A7_JointArmIndex)
         head_indices = set(member.value for member in R1_A7_JointHeadIndex)
+        waist_indices = {
+            R1_A7_JointIndex.kWaistRollNotUsed.value,
+            R1_A7_JointIndex.kWaistYaw.value,
+        }
         for id in R1_A7_JointIndex:
             self.msg.motor_cmd[id].mode = 1
             if id.value in arm_indices:
                 if self._Is_wrist_motor(id):
                     self.msg.motor_cmd[id].kp = self.kp_wrist
                     self.msg.motor_cmd[id].kd = self.kd_wrist
+                elif self._Is_medium_arm_motor(id):
+                    self.msg.motor_cmd[id].kp = self.kp_medium
+                    self.msg.motor_cmd[id].kd = self.kd_medium
                 else:
                     self.msg.motor_cmd[id].kp = self.kp_low
                     self.msg.motor_cmd[id].kd = self.kd_low
             elif id.value in head_indices:
                 self.msg.motor_cmd[id].kp = self.kp_head
                 self.msg.motor_cmd[id].kd = self.kd_head
+            elif id.value in waist_indices:
+                self.msg.motor_cmd[id].kp = self.kp_low
+                self.msg.motor_cmd[id].kd = self.kd_high
             else:
                 if self._Is_weak_motor(id):
                     self.msg.motor_cmd[id].kp = self.kp_low
@@ -2082,8 +2122,8 @@ class R1_A7_ArmController:
             self.msg.motor_cmd[id].q  = self.all_motor_q[id]
         logger_mp.info("Lock OK!")
 
-        # head pitch/yaw gradually return to zero at startup
-        self.ctrl_head_go_home()
+        # Head and available waist joints gradually return to zero at startup.
+        self.ctrl_head_and_waist_go_home()
 
         # initialize publish thread
         self.publish_thread = threading.Thread(target=self._ctrl_motor_state)
@@ -2113,19 +2153,28 @@ class R1_A7_ArmController:
         cliped_arm_q_target = current_q + delta / max(motion_scale, 1.0)
         return cliped_arm_q_target
 
-    def ctrl_head_go_home(self, duration = 3.0):
-        '''At startup, linearly move head pitch/yaw from their current position to zero over `duration` seconds.'''
-        logger_mp.info("[R1_A7_ArmController] head returning to zero...")
-        start_q = self.get_current_head_q()
+    def ctrl_head_and_waist_go_home(self, duration = 3.0):
+        '''Linearly move the head and available waist joints to zero at startup.'''
+        logger_mp.info("[R1_A7_ArmController] head and waist returning to zero...")
+        waist_indices = (
+            R1_A7_JointIndex.kWaistRollNotUsed,
+            R1_A7_JointIndex.kWaistYaw,
+        )
+        start_head_q = self.get_current_head_q()
+        start_waist_q = self.all_motor_q[[id.value for id in waist_indices]]
         steps = max(1, int(duration / self.control_dt))
         for step in range(1, steps + 1):
-            head_q = start_q * (1.0 - step / steps)   # linear ramp to zero
+            scale = 1.0 - step / steps
+            head_q = start_head_q * scale
+            waist_q = start_waist_q * scale
             for idx, id in enumerate(R1_A7_JointHeadIndex):
                 self.msg.motor_cmd[id].q = head_q[idx]
+            for idx, id in enumerate(waist_indices):
+                self.msg.motor_cmd[id].q = waist_q[idx]
             self.msg.crc = self.crc.Crc(self.msg)
             self.lowcmd_publisher.Write(self.msg)
             time.sleep(self.control_dt)
-        logger_mp.info("[R1_A7_ArmController] head return to zero OK!")
+        logger_mp.info("[R1_A7_ArmController] head and waist return to zero OK!")
 
     def _ctrl_motor_state(self):
         while True:
@@ -2233,6 +2282,15 @@ class R1_A7_ArmController:
         ]
         return motor_index.value in wrist_motors
 
+    def _Is_medium_arm_motor(self, motor_index):
+        medium_arm_motors = [
+            R1_A7_JointIndex.kLeftShoulderYaw.value,
+            R1_A7_JointIndex.kLeftElbow.value,
+            R1_A7_JointIndex.kRightShoulderYaw.value,
+            R1_A7_JointIndex.kRightElbow.value,
+        ]
+        return motor_index.value in medium_arm_motors
+
 class R1_A7_JointArmIndex(IntEnum):
     # Left arm
     kLeftShoulderPitch = 15
@@ -2273,9 +2331,9 @@ class R1_A7_JointIndex(IntEnum):
     kRightAnklePitch = 10
     kRightAnkleRoll = 11
 
-    kWaistYaw = 12
-    kWaistRoll = 13
-    kWaistPitch = 14
+    kWaistRollNotUsed = 12
+    kWaistYaw = 13
+    kWaistPitchNotUsed = 14
 
     # Left arm
     kLeftShoulderPitch = 15
