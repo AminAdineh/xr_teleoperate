@@ -91,12 +91,8 @@ class G1_29_ArmController:
         self.kd_wrist = 1.5
 
         self.all_motor_q = None
-        self.arm_velocity_limit = 20.0
+        self.set_arm_velocity_limit()
         self.control_dt = 1.0 / 250.0
-
-        self._speed_gradual_max = False
-        self._gradual_start_time = None
-        self._gradual_time = None
 
         if self.motion_mode:
             self.lowcmd_publisher = ChannelPublisher(kTopicLowCommand_Motion, hg_LowCmd)
@@ -199,10 +195,6 @@ class G1_29_ArmController:
             self.msg.crc = self.crc.Crc(self.msg)
             self.lowcmd_publisher.Write(self.msg)
 
-            if self._speed_gradual_max is True:
-                t_elapsed = start_time - self._gradual_start_time
-                self.arm_velocity_limit = 20.0 + (10.0 * min(1.0, t_elapsed / 5.0))
-
             current_time = time.time()
             all_t_elapsed = current_time - start_time
             sleep_time = max(0, (self.control_dt - all_t_elapsed))
@@ -255,15 +247,12 @@ class G1_29_ArmController:
             current_attempts += 1
             time.sleep(0.05)
 
-    def speed_gradual_max(self, t = 5.0):
-        '''Parameter t is the total time required for arms velocity to gradually increase to its maximum value, in seconds. The default is 5.0.'''
-        self._gradual_start_time = time.time()
-        self._gradual_time = t
-        self._speed_gradual_max = True
-
-    def speed_instant_max(self):
-        '''set arms velocity to the maximum value immediately, instead of gradually increasing.'''
-        self.arm_velocity_limit = 30.0
+    def set_arm_velocity_limit(self, velocity_limit = 30.0):
+        '''Set the arm joint velocity limit in radians per second.'''
+        velocity_limit = float(velocity_limit)
+        if not np.isfinite(velocity_limit) or velocity_limit <= 0.0:
+            raise ValueError("arm_velocity_limit must be a positive finite value.")
+        self.arm_velocity_limit = velocity_limit
 
     def _Is_weak_motor(self, motor_index):
         weak_motors = [
@@ -404,11 +393,8 @@ class G1_29_Arm_Internal_Dex1_Controller:
         self.kd_wrist = 1.5
 
         self.all_motor_q = None
-        self.arm_velocity_limit = 20.0
+        self.set_arm_velocity_limit()
         self.control_dt = 1.0 / 250.0
-        self._speed_gradual_max = False
-        self._gradual_start_time = None
-        self._gradual_time = None
         self.running = True
         self.ctrl_lock = threading.Lock()
 
@@ -471,10 +457,6 @@ class G1_29_Arm_Internal_Dex1_Controller:
 
             self.msg.crc = self.crc.Crc(self.msg)
             self.lowcmd_publisher.Write(self.msg)
-
-            if self._speed_gradual_max is True:
-                t_elapsed = start_time - self._gradual_start_time
-                self.arm_velocity_limit = 20.0 + (10.0 * min(1.0, t_elapsed / 5.0))
 
             sleep_time = max(0, self.control_dt - (time.time() - start_time))
             time.sleep(sleep_time)
@@ -650,13 +632,12 @@ class G1_29_Arm_Internal_Dex1_Controller:
             current_attempts += 1
             time.sleep(0.05)
 
-    def speed_gradual_max(self, t = 5.0):
-        self._gradual_start_time = time.time()
-        self._gradual_time = t
-        self._speed_gradual_max = True
-
-    def speed_instant_max(self):
-        self.arm_velocity_limit = 30.0
+    def set_arm_velocity_limit(self, velocity_limit = 30.0):
+        '''Set the arm joint velocity limit in radians per second.'''
+        velocity_limit = float(velocity_limit)
+        if not np.isfinite(velocity_limit) or velocity_limit <= 0.0:
+            raise ValueError("arm_velocity_limit must be a positive finite value.")
+        self.arm_velocity_limit = velocity_limit
 
     def _Is_weak_motor(self, motor_index):
         weak_motors = [
@@ -702,12 +683,8 @@ class G1_23_ArmController:
         self.kd_wrist = 1.5
 
         self.all_motor_q = None
-        self.arm_velocity_limit = 20.0
+        self.set_arm_velocity_limit()
         self.control_dt = 1.0 / 250.0
-
-        self._speed_gradual_max = False
-        self._gradual_start_time = None
-        self._gradual_time = None
 
         
         if self.motion_mode:
@@ -811,10 +788,6 @@ class G1_23_ArmController:
             self.msg.crc = self.crc.Crc(self.msg)
             self.lowcmd_publisher.Write(self.msg)
 
-            if self._speed_gradual_max is True:
-                t_elapsed = start_time - self._gradual_start_time
-                self.arm_velocity_limit = 20.0 + (10.0 * min(1.0, t_elapsed / 5.0))
-
             current_time = time.time()
             all_t_elapsed = current_time - start_time
             sleep_time = max(0, (self.control_dt - all_t_elapsed))
@@ -867,15 +840,12 @@ class G1_23_ArmController:
             current_attempts += 1
             time.sleep(0.05)
 
-    def speed_gradual_max(self, t = 5.0):
-        '''Parameter t is the total time required for arms velocity to gradually increase to its maximum value, in seconds. The default is 5.0.'''
-        self._gradual_start_time = time.time()
-        self._gradual_time = t
-        self._speed_gradual_max = True
-
-    def speed_instant_max(self):
-        '''set arms velocity to the maximum value immediately, instead of gradually increasing.'''
-        self.arm_velocity_limit = 30.0
+    def set_arm_velocity_limit(self, velocity_limit = 30.0):
+        '''Set the arm joint velocity limit in radians per second.'''
+        velocity_limit = float(velocity_limit)
+        if not np.isfinite(velocity_limit) or velocity_limit <= 0.0:
+            raise ValueError("arm_velocity_limit must be a positive finite value.")
+        self.arm_velocity_limit = velocity_limit
 
     def _Is_weak_motor(self, motor_index):
         weak_motors = [
@@ -980,12 +950,8 @@ class H1_2_ArmController:
         self.kd_wrist = 2.0
 
         self.all_motor_q = None
-        self.arm_velocity_limit = 20.0
+        self.set_arm_velocity_limit()
         self.control_dt = 1.0 / 250.0
-
-        self._speed_gradual_max = False
-        self._gradual_start_time = None
-        self._gradual_time = None
 
 
         if self.motion_mode:
@@ -1089,10 +1055,6 @@ class H1_2_ArmController:
             self.msg.crc = self.crc.Crc(self.msg)
             self.lowcmd_publisher.Write(self.msg)
 
-            if self._speed_gradual_max is True:
-                t_elapsed = start_time - self._gradual_start_time
-                self.arm_velocity_limit = 20.0 + (10.0 * min(1.0, t_elapsed / 5.0))
-
             current_time = time.time()
             all_t_elapsed = current_time - start_time
             sleep_time = max(0, (self.control_dt - all_t_elapsed))
@@ -1145,15 +1107,12 @@ class H1_2_ArmController:
             current_attempts += 1
             time.sleep(0.05)
 
-    def speed_gradual_max(self, t = 5.0):
-        '''Parameter t is the total time required for arms velocity to gradually increase to its maximum value, in seconds. The default is 5.0.'''
-        self._gradual_start_time = time.time()
-        self._gradual_time = t
-        self._speed_gradual_max = True
-
-    def speed_instant_max(self):
-        '''set arms velocity to the maximum value immediately, instead of gradually increasing.'''
-        self.arm_velocity_limit = 30.0
+    def set_arm_velocity_limit(self, velocity_limit = 30.0):
+        '''Set the arm joint velocity limit in radians per second.'''
+        velocity_limit = float(velocity_limit)
+        if not np.isfinite(velocity_limit) or velocity_limit <= 0.0:
+            raise ValueError("arm_velocity_limit must be a positive finite value.")
+        self.arm_velocity_limit = velocity_limit
 
     def _Is_weak_motor(self, motor_index):
         weak_motors = [
@@ -1262,12 +1221,8 @@ class H1_ArmController:
         self.kd_low = 3.0
 
         self.all_motor_q = None
-        self.arm_velocity_limit = 20.0
+        self.set_arm_velocity_limit()
         self.control_dt = 1.0 / 250.0
-
-        self._speed_gradual_max = False
-        self._gradual_start_time = None
-        self._gradual_time = None
 
         self.lowcmd_publisher = ChannelPublisher(kTopicLowCommand_Debug, go_LowCmd)
         self.lowcmd_publisher.Init()
@@ -1356,10 +1311,6 @@ class H1_ArmController:
             self.msg.crc = self.crc.Crc(self.msg)
             self.lowcmd_publisher.Write(self.msg)
 
-            if self._speed_gradual_max is True:
-                t_elapsed = start_time - self._gradual_start_time
-                self.arm_velocity_limit = 20.0 + (10.0 * min(1.0, t_elapsed / 5.0))
-
             current_time = time.time()
             all_t_elapsed = current_time - start_time
             sleep_time = max(0, (self.control_dt - all_t_elapsed))
@@ -1402,15 +1353,12 @@ class H1_ArmController:
             current_attempts += 1
             time.sleep(0.05)
 
-    def speed_gradual_max(self, t = 5.0):
-        '''Parameter t is the total time required for arms velocity to gradually increase to its maximum value, in seconds. The default is 5.0.'''
-        self._gradual_start_time = time.time()
-        self._gradual_time = t
-        self._speed_gradual_max = True
-
-    def speed_instant_max(self):
-        '''set arms velocity to the maximum value immediately, instead of gradually increasing.'''
-        self.arm_velocity_limit = 30.0
+    def set_arm_velocity_limit(self, velocity_limit = 30.0):
+        '''Set the arm joint velocity limit in radians per second.'''
+        velocity_limit = float(velocity_limit)
+        if not np.isfinite(velocity_limit) or velocity_limit <= 0.0:
+            raise ValueError("arm_velocity_limit must be a positive finite value.")
+        self.arm_velocity_limit = velocity_limit
 
     def _Is_weak_motor(self, motor_index):
         weak_motors = [
@@ -1482,12 +1430,8 @@ class H2_ArmController:
         self.kd_wrist = 2.0
 
         self.all_motor_q = None
-        self.arm_velocity_limit = 20.0
+        self.set_arm_velocity_limit()
         self.control_dt = 1.0 / 250.0
-
-        self._speed_gradual_max = False
-        self._gradual_start_time = None
-        self._gradual_time = None
         
         if self.motion_mode:
             self.lowcmd_publisher = ChannelPublisher(kTopicLowCommand_Motion, hg_LowCmd)
@@ -1593,10 +1537,6 @@ class H2_ArmController:
             self.msg.crc = self.crc.Crc(self.msg)
             self.lowcmd_publisher.Write(self.msg)
 
-            if self._speed_gradual_max is True:
-                t_elapsed = start_time - self._gradual_start_time
-                self.arm_velocity_limit = 20.0 + (10.0 * min(1.0, t_elapsed / 5.0))
-
             current_time = time.time()
             all_t_elapsed = current_time - start_time
             sleep_time = max(0, (self.control_dt - all_t_elapsed))
@@ -1646,13 +1586,12 @@ class H2_ArmController:
             current_attempts += 1
             time.sleep(0.05)
 
-    def speed_gradual_max(self, t=5.0):
-        self._gradual_start_time = time.time()
-        self._gradual_time = t
-        self._speed_gradual_max = True
-
-    def speed_instant_max(self):
-        self.arm_velocity_limit = 30.0
+    def set_arm_velocity_limit(self, velocity_limit = 30.0):
+        '''Set the arm joint velocity limit in radians per second.'''
+        velocity_limit = float(velocity_limit)
+        if not np.isfinite(velocity_limit) or velocity_limit <= 0.0:
+            raise ValueError("arm_velocity_limit must be a positive finite value.")
+        self.arm_velocity_limit = velocity_limit
 
     def _Is_weak_motor(self, motor_index):
         weak_motors = [
@@ -1768,12 +1707,8 @@ class R1_A5_ArmController:
         self.kd_head = 1.0
 
         self.all_motor_q = None
-        self.arm_velocity_limit = 20.0
+        self.set_arm_velocity_limit()
         self.control_dt = 1.0 / 250.0
-
-        self._speed_gradual_max = False
-        self._gradual_start_time = None
-        self._gradual_time = None
 
         if self.motion_mode:
             self.lowcmd_publisher = ChannelPublisher(kTopicLowCommand_Motion, hg_LowCmd)
@@ -1921,10 +1856,6 @@ class R1_A5_ArmController:
             self.msg.crc = self.crc.Crc(self.msg)
             self.lowcmd_publisher.Write(self.msg)
 
-            if self._speed_gradual_max is True:
-                t_elapsed = start_time - self._gradual_start_time
-                self.arm_velocity_limit = 20.0 + (10.0 * min(1.0, t_elapsed / 5.0))
-
             current_time = time.time()
             all_t_elapsed = current_time - start_time
             sleep_time = max(0, (self.control_dt - all_t_elapsed))
@@ -1981,15 +1912,12 @@ class R1_A5_ArmController:
         # Always release the overlay on shutdown, even when homing times out.
         self.release_arm_sdk()
 
-    def speed_gradual_max(self, t = 5.0):
-        '''Parameter t is the total time required for arms velocity to gradually increase to its maximum value, in seconds. The default is 5.0.'''
-        self._gradual_start_time = time.time()
-        self._gradual_time = t
-        self._speed_gradual_max = True
-
-    def speed_instant_max(self):
-        '''set arms velocity to the maximum value immediately, instead of gradually increasing.'''
-        self.arm_velocity_limit = 30.0
+    def set_arm_velocity_limit(self, velocity_limit = 30.0):
+        '''Set the arm joint velocity limit in radians per second.'''
+        velocity_limit = float(velocity_limit)
+        if not np.isfinite(velocity_limit) or velocity_limit <= 0.0:
+            raise ValueError("arm_velocity_limit must be a positive finite value.")
+        self.arm_velocity_limit = velocity_limit
 
     def _Is_weak_motor(self, motor_index):
         weak_motors = [
@@ -2101,12 +2029,8 @@ class R1_A7_ArmController:
         self.kd_head = 1.0
 
         self.all_motor_q = None
-        self.arm_velocity_limit = 20.0
+        self.set_arm_velocity_limit()
         self.control_dt = 1.0 / 250.0
-
-        self._speed_gradual_max = False
-        self._gradual_start_time = None
-        self._gradual_time = None
 
         self.lowcmd_publisher = ChannelPublisher(kTopicLowCommand_Debug, hg_LowCmd)
         self.lowcmd_publisher.Init()
@@ -2224,10 +2148,6 @@ class R1_A7_ArmController:
             self.msg.crc = self.crc.Crc(self.msg)
             self.lowcmd_publisher.Write(self.msg)
 
-            if self._speed_gradual_max is True:
-                t_elapsed = start_time - self._gradual_start_time
-                self.arm_velocity_limit = 20.0 + (10.0 * min(1.0, t_elapsed / 5.0))
-
             current_time = time.time()
             all_t_elapsed = current_time - start_time
             sleep_time = max(0, (self.control_dt - all_t_elapsed))
@@ -2278,15 +2198,12 @@ class R1_A7_ArmController:
             current_attempts += 1
             time.sleep(0.05)
 
-    def speed_gradual_max(self, t = 5.0):
-        '''Parameter t is the total time required for arms velocity to gradually increase to its maximum value, in seconds. The default is 5.0.'''
-        self._gradual_start_time = time.time()
-        self._gradual_time = t
-        self._speed_gradual_max = True
-
-    def speed_instant_max(self):
-        '''set arms velocity to the maximum value immediately, instead of gradually increasing.'''
-        self.arm_velocity_limit = 30.0
+    def set_arm_velocity_limit(self, velocity_limit = 30.0):
+        '''Set the arm joint velocity limit in radians per second.'''
+        velocity_limit = float(velocity_limit)
+        if not np.isfinite(velocity_limit) or velocity_limit <= 0.0:
+            raise ValueError("arm_velocity_limit must be a positive finite value.")
+        self.arm_velocity_limit = velocity_limit
 
     def _Is_weak_motor(self, motor_index):
         weak_motors = [
@@ -2422,7 +2339,6 @@ if __name__ == "__main__":
     user_input = input("Please enter the start signal (enter 's' to start the subsequent program): \n")
     if user_input.lower() == 's':
         step = 0
-        arm.speed_gradual_max()
         while True:
             if step <= 120:
                 angle = rotation_speed * step

@@ -298,7 +298,6 @@ if __name__ == '__main__':
                     tv_wrapper.render_to_xr(head_img.bgr)
 
         logger_mp.info("---------------------🚀start Tracking🚀-------------------------")
-        arm_ctrl.speed_gradual_max()
 
         head_img = None
         left_wrist_img = None
