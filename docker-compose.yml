@@ -1,0 +1,45 @@
+# docker-compose.yml for running unitree xr_teleoperate on Docker Desktop (Windows).
+#
+# Before starting:
+#   1. Check out submodules:  git submodule update --init --depth 1
+#   2. Set the two IPs below in a .env file (next to this file):
+#        ROBOT_IP=192.168.123.161   # your Unitree robot's LAN IP
+#        HOST_IP=192.168.1.50        # your WINDOWS PC's LAN IP (the headset connects here)
+#        IMG_SERVER_IP=192.168.123.164  # PC running teleimager with the cameras
+#   3. docker compose build   (first time only; ~15-30 min, downloads torch/pinocchio)
+#   4. docker compose up
+#
+# Then open on the XR headset:  https://<HOST_IP>:8012
+# (Accept the self-signed cert warning on the headset the first time.)
+
+services:
+  teleop:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: xr-teleoperate:latest
+    # Bind-mount the repo over /app so source edits apply without a rebuild.
+    volumes:
+      - ./:/app
+      - televuer-certs:/root/.config/xr_teleoperate
+    ports:
+      - "8012:8012"   # televuer HTTPS XR page (opened on the headset)
+    environment:
+      - ROBOT_IP=${ROBOT_IP:-192.168.123.161}
+      - HOST_IP=${HOST_IP:-}
+      - IMG_SERVER_IP=${IMG_SERVER_IP:-192.168.123.164}
+      - NET_IFACE=eth0
+    # The full teleop command. Adjust --arm / --ee / --display-mode / --input-mode to your setup.
+    # See `docker compose run --rm teleop python teleop/teleop_hand_and_arm.py --help` for all flags.
+    command: >
+      python teleop/teleop_hand_and_arm.py
+      --arm G1_29
+      --ee dex1
+      --display-mode immersive
+      --input-mode hand
+      --img-server-ip ${IMG_SERVER_IP:-192.168.123.164}
+    stdin_open: true
+    tty: true
+
+volumes:
+  televuer-certs:
