@@ -125,6 +125,8 @@ The currently supported devices in this repository:
 
 We tested our code on Ubuntu 20.04 and Ubuntu 22.04, other operating systems may be configured differently. This document primarily describes the **default mode**.
 
+> **Windows 11 users**: See [docs/WINDOWS.md](docs/WINDOWS.md) for a complete Windows 11 installation and usage guide. Windows 11 is supported as a first-class platform — no WSL, Docker, or Linux VM required. Use `scripts/install_windows.ps1` for automated installation and `tools/windows_diagnostics.py` to verify your setup. See [docs/WINDOWS_COMPATIBILITY.md](docs/WINDOWS_COMPATIBILITY.md) for the full compatibility matrix.
+
 For more information, you can refer to [Official Documentation ](https://support.unitree.com/home/zh/Teleoperation) and [OpenTeleVision](https://github.com/OpenTeleVision/TeleVision).
 
 ## 1.1 📥 basic
@@ -228,6 +230,7 @@ build  cert.pem  key.pem  LICENSE  pyproject.toml  README.md  rootCA.key  rootCA
 |        `--ee`         | Select the end-effector type of the arm (see 0. 📖 Introduction) | `dex1` `dex1_internal` `dex3` `inspire_ftp` `inspire_dfx` `brainco` |       None        |
 |   `--img-server-ip`   | Set the image server IP address for receiving image streams and configuring WebRTC signaling |                        `IPv4` address                        | `192.168.123.164` |
 | `--network-interface` |    Set the network interface for CycloneDDS communication    |                    Network Interface Name                    |      `None`       |
+| `--list-interfaces` |    List available network interfaces and exit    |                    N/A (flag)                    |      `False`       |
 
 - **Mode switch parameters**
 

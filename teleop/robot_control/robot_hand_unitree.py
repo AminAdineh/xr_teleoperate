@@ -13,7 +13,12 @@ import time
 import os
 import sys
 import threading
-from multiprocessing import Process, Array, Value, Lock
+from multiprocessing import Array, Value, Lock
+import sys as _sys
+if _sys.platform == "win32":
+    from threading import Thread as Process  # Windows: Thread avoids spawn pickling issues
+else:
+    from multiprocessing import Process      # Linux: preserve fork-based Process
 
 parent2_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(parent2_dir)

@@ -1,0 +1,66 @@
+# Windows 11 dependencies for xr_teleoperate
+# Install with: pip install -r requirements-windows.txt
+#
+# NOTE: Pinocchio and NLopt should be installed via conda first:
+#   conda install pinocchio nlopt -c conda-forge
+#
+# NOTE: unitree_sdk2_python must be cloned and installed separately:
+#   git clone https://github.com/unitreerobotics/unitree_sdk2_python.git
+#   cd unitree_sdk2_python
+#   pip install -e .
+
+# Core scientific stack
+numpy>=1.21,<2.0.0
+scipy>=1.10.0
+
+# CasADi (for inverse kinematics optimization)
+casadi>=3.6.0
+
+# OpenCV (image processing)
+opencv-python>=4.8.0
+
+# PyZMQ (inter-process and network communication)
+pyzmq>=25.0.0
+
+# PyYAML (configuration files)
+pyyaml>=6.0
+
+# Logging
+logging-mp>=0.3.0
+
+# SSH keyboard (terminal input)
+sshkeyboard>=2.3.1
+
+# Vuer (XR device WebRTC/HTTPS communication)
+vuer[all]==0.0.60
+
+# Meshcat (3D visualization)
+meshcat>=0.3.2
+
+# Rerun SDK (visualization/logging)
+rerun-sdk>=0.20.0
+
+# Matplotlib (filter visualization)
+matplotlib>=3.7.0
+
+# PyTransform3D (3D transformations, used by dex-retargeting)
+pytransform3d>=3.5.0
+
+# Trimesh (mesh handling, used by dex-retargeting)
+trimesh>=4.4.0
+
+# Anytree (tree structures, used by dex-retargeting)
+anytree>=2.12.0
+
+# LXML (URDF parsing, used by dex-retargeting)
+lxml>=5.2.2
+
+# PyTorch (neural network, used by dex-retargeting)
+torch>=2.0.0
+
+# psutil (cross-platform process and network management)
+psutil>=5.9.0
+
+# WebRTC dependencies (for teleimager server, if needed on Windows)
+aiortc>=1.6.0
+aiohttp>=3.8.0

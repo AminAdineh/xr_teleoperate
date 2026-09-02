@@ -6,7 +6,12 @@ import numpy as np
 from enum import IntEnum
 import threading
 import time
-from multiprocessing import Process, Array
+from multiprocessing import Array
+import sys as _sys
+if _sys.platform == "win32":
+    from threading import Thread as Process  # Windows: Thread avoids spawn pickling issues
+else:
+    from multiprocessing import Process      # Linux: preserve fork-based Process
 
 import logging_mp
 logger_mp = logging_mp.getLogger(__name__)

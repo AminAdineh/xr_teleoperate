@@ -5,6 +5,11 @@ import threading
 import logging_mp
 logger_mp = logging_mp.getLogger(__name__)
 
+# Cross-platform IPC transport (ipc:// on Linux, tcp:// on Windows)
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from platform.ipc_transport import get_ipc_endpoint
+
 """
 # Client → Server (Request)
 1) launch
@@ -89,13 +94,15 @@ class IPC_Server:
 
         self.ctx = zmq.Context.instance()
         self.rep_socket = self.ctx.socket(zmq.REP)
-        self.rep_socket.bind("ipc://@xr_teleoperate_data.ipc")
-        logger_mp.info("[IPC_Server] Listening to Data at ipc://@xr_teleoperate_data.ipc")
+        self._data_endpoint = get_ipc_endpoint("xr_teleoperate_data")
+        self.rep_socket.bind(self._data_endpoint)
+        logger_mp.info(f"[IPC_Server] Listening to Data at {self._data_endpoint}")
 
         # heartbeat IPC (PUB/SUB)
         self.pub_socket = self.ctx.socket(zmq.PUB)
-        self.pub_socket.bind("ipc://@xr_teleoperate_hb.ipc")
-        logger_mp.info("[IPC_Server] Publishing HeartBeat at ipc://@xr_teleoperate_hb.ipc")
+        self._hb_endpoint = get_ipc_endpoint("xr_teleoperate_hb")
+        self.pub_socket.bind(self._hb_endpoint)
+        logger_mp.info(f"[IPC_Server] Publishing HeartBeat at {self._hb_endpoint}")
 
     def _data_loop(self):
         """
@@ -212,17 +219,19 @@ class IPC_Client:
 
         self.sub_socket = self.ctx.socket(zmq.SUB)
         self.sub_socket.setsockopt(zmq.RCVHWM, 1)
-        self.sub_socket.connect("ipc://@xr_teleoperate_hb.ipc")
+        self._hb_endpoint = get_ipc_endpoint("xr_teleoperate_hb")
+        self.sub_socket.connect(self._hb_endpoint)
         self.sub_socket.setsockopt_string(zmq.SUBSCRIBE, "")
-        logger_mp.info("[IPC_Client] Subscribed to HeartBeat at ipc://@xr_teleoperate_hb.ipc")
+        logger_mp.info(f"[IPC_Client] Subscribed to HeartBeat at {self._hb_endpoint}")
 
         self._hb_thread = threading.Thread(target=self._hb_loop, daemon=True)
         self._hb_thread.start()
 
         # data IPC (REQ/REP)
         self.req_socket = self.ctx.socket(zmq.REQ)
-        self.req_socket.connect("ipc://@xr_teleoperate_data.ipc")
-        logger_mp.info("[IPC_Client] Connected to Data at ipc://@xr_teleoperate_data.ipc")
+        self._data_endpoint = get_ipc_endpoint("xr_teleoperate_data")
+        self.req_socket.connect(self._data_endpoint)
+        logger_mp.info(f"[IPC_Client] Connected to Data at {self._data_endpoint}")
 
     def _make_reqid(self) -> str:
         import uuid
