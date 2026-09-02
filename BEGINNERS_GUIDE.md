@@ -22,7 +22,7 @@ Complete walkthrough — from zero to robot teleoperation on Windows, using only
    cd C:\Users\YourName\xr_teleoperate
    ```
    (use whatever path you cloned it to)
-3. Download the 4 Docker files (Dockerfile, docker-compose.yml, docker-entrypoint.sh, SETUP_WINDOWS.md) and place them **into that folder** (next to the `teleop` folder, not inside it).
+3. Download the Docker setup files (Dockerfile, docker-compose.yml, docker-entrypoint.sh, run.bat, .env.example, .gitattributes, .dockerignore, SETUP_WINDOWS.md, BEGINNERS_GUIDE.md) and place them **into that folder** (next to the `teleop` folder, not inside it).
 4. Still in PowerShell, check out the submodules:
    ```powershell
    git submodule update --init --depth 1
@@ -58,17 +58,23 @@ The other two you get from your robot setup:
 
 ## Step 4 — Create the `.env` file
 
-In your `xr_teleoperate` folder (the one with `docker-compose.yml`), create a new text file named exactly `.env` (no name before the dot). Open it in Notepad and paste:
+The download includes a file called `.env.example`. You just need to copy it and fill in your IPs.
 
+**Easiest way (PowerShell):**
+```powershell
+copy .env.example .env
+notepad .env
+```
+
+Replace the three IP numbers with your real IPs from Step 3:
 ```env
 ROBOT_IP=192.168.123.161
 HOST_IP=192.168.1.50
 IMG_SERVER_IP=192.168.123.164
 ```
+Save and close Notepad.
 
-Replace the numbers with your real IPs from Step 3. Save and close.
-
-> **Notepad tip:** when saving, change "Save as type" to "All Files" so it doesn't add `.txt` to the end.
+> **If you create the file manually instead:** name it exactly `.env` (no name before the dot). In Notepad's save dialog, change "Save as type" to "All Files" so it doesn't add `.txt`.
 
 ---
 
@@ -88,16 +94,21 @@ If it fails, copy the last ~20 lines of the error and paste them to me.
 
 ## Step 6 — Start the teleoperation program
 
+**Double-click `run.bat`** in your repo folder.
+
+Or, if you prefer the command line:
 ```powershell
-docker compose up
+docker compose run --rm -it --service-ports teleop
 ```
 
-You'll see logs scrolling. The container is now:
+This starts the program with an **interactive terminal** so your keyboard works. You'll see logs scrolling. The container is now:
 - generating an SSL certificate,
 - connecting to the robot over DDS,
 - starting the XR web page on port 8012.
 
 **Leave this window open** — closing it stops the program.
+
+> **Why `run.bat` and not `docker compose up`?** The teleop program needs your keyboard (press `r` to start, `q` to stop). `docker compose up` doesn't reliably forward keyboard input to the container. `run.bat` uses `docker compose run --rm -it --service-ports` which gives a real interactive terminal AND maps port 8012 for the headset.
 
 ---
 
@@ -122,7 +133,7 @@ Put on the headset and you should see the robot's camera view. Press **`r`** on 
 | Command | What it does |
 |---------|-------------|
 | `docker compose build` | Builds the image (once) |
-| `docker compose up` | Starts teleoperation |
+| `run.bat` (or `docker compose run --rm -it --service-ports teleop`) | Starts teleoperation with keyboard |
 | `docker compose down` | Stops and cleans up |
 | `docker compose run --rm teleop python teleop/teleop_hand_and_arm.py --help` | See all available flags |
 

@@ -52,7 +52,9 @@ RUN pip install --no-cache-dir "teleimager[server]" -e teleop/teleimager || true
 RUN mkdir -p /root/.config/xr_teleoperate
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+# Strip Windows CRLF line endings — Git on Windows may check out .sh files with CRLF,
+# which breaks bash ("bad interpreter: /bin/bash^M"). This makes it Windows-safe.
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && chmod +x /usr/local/bin/docker-entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["python", "teleop/teleop_hand_and_arm.py", "--arm", "G1_29"]

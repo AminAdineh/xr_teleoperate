@@ -2,12 +2,14 @@
 #
 # Before starting:
 #   1. Check out submodules:  git submodule update --init --depth 1
-#   2. Set the two IPs below in a .env file (next to this file):
+#   2. Copy .env.example to .env and fill in your IPs:
 #        ROBOT_IP=192.168.123.161   # your Unitree robot's LAN IP
 #        HOST_IP=192.168.1.50        # your WINDOWS PC's LAN IP (the headset connects here)
 #        IMG_SERVER_IP=192.168.123.164  # PC running teleimager with the cameras
 #   3. docker compose build   (first time only; ~15-30 min, downloads torch/pinocchio)
-#   4. docker compose up
+#   4. Double-click run.bat  (or:  docker compose run --rm -it --service-ports teleop)
+#      This gives you an interactive terminal so keyboard controls work:
+#        r = start robot following VR,  q = stop,  s = toggle recording
 #
 # Then open on the XR headset:  https://<HOST_IP>:8012
 # (Accept the self-signed cert warning on the headset the first time.)

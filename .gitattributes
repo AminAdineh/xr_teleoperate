@@ -1,0 +1,11 @@
+# Force LF line endings on files that break with CRLF (Windows Git default).
+# Without this, docker-entrypoint.sh gets ^M line endings and bash fails to run it.
+*.sh           text eol=lf
+Dockerfile     text eol=lf
+*.yml          text eol=lf
+*.yaml         text eol=lf
+*.env          text eol=lf
+*.env.example  text eol=lf
+
+# Let Git auto-handle everything else.
+* text=auto

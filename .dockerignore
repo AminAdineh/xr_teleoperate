@@ -1,0 +1,29 @@
+# Exclude files from the Docker build context to speed up builds and avoid copying junk.
+.git
+.github
+*.md
+!requirements.txt
+.gitattributes
+.env
+.env.example
+
+# Data recorded during teleoperation (large, not needed in the image).
+teleop/utils/data/
+**/data/
+**/*.pkl
+**/*.json
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+.eggs/
+*.egg-info/
+build/
+dist/
+
+# IDE / OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
