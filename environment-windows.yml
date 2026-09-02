@@ -26,13 +26,13 @@ dependencies:
   
   # Visualization
   - matplotlib>=3.7.0
-  - meshcat>=0.3.2
   
   # System utilities
   - psutil>=5.9.0
   
   # Pip-only packages (no conda package or specific version needed)
   - pip:
+    - meshcat>=0.3.2
     - logging-mp>=0.3.0
     - sshkeyboard>=2.3.1
     - vuer[all]==0.0.60
@@ -44,3 +44,4 @@ dependencies:
     - torch>=2.0.0
     - aiortc>=1.6.0
     - aiohttp>=3.8.0
+    - PySide6>=6.5.0
