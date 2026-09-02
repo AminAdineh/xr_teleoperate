@@ -167,4 +167,4 @@ FAILED tests/test_sdk_import.py::TestSDKImport::test_import_channel_subscriber -
 FAILED tests/test_sdk_import.py::TestSDKImport::test_import_crc - Failed: unitree_sdk2py.utils.crc.CRC not available
 FAILED tests/test_sdk_import.py::TestSDKImport::test_import_hg_lowcmd - Failed: unitree_sdk2py.idl.unitree_hg.msg.dds_.LowCmd_ not available
 FAILED tests/test_sdk_import.py::TestSDKImport::test_import_go_lowcmd - Failed: unitree_sdk2py.idl.unitree_go.msg.dds_.LowCmd_ not available
-============= 6 failed, 73 passed, 7 skipped, 5 warnings in 2.33s ==============
+============= 6 failed, 73 passed, 7 skipped, 5 warnings in 2.14s ==============

@@ -52,6 +52,18 @@ assets_path = project_root / "assets"
 if assets_path.exists():
     datas.append((str(assets_path), "assets"))
 
+# Collect PySide6 Qt plugins and data files (Qt platforms, styles, image formats)
+extra_binaries = []
+try:
+    from PyInstaller.utils.hooks import collect_all
+    for pkg in ("PySide6",):
+        d, b, hidden = collect_all(pkg)
+        datas += d
+        extra_binaries += b
+        # hidden already added below via hiddenimports
+except Exception:
+    pass  # PyInstaller hooks handle PySide6 automatically if this fails
+
 a = Analysis(
     [str(project_root / "app" / "main.py")],
     pathex=[str(project_root)],
@@ -84,10 +96,20 @@ a = Analysis(
         "teleop.utils.motion_switcher",
         "teleop.utils.weighted_moving_filter",
         "teleop.utils.sim_state_topic",
+        # GUI app
+        "app",
+        "app.main",
+        "app.gui",
+        "app.gui.main_window",
+        "app.services",
+        "app.workers",
+        "app.models",
         # External deps
         "PySide6.QtWidgets",
         "PySide6.QtCore",
         "PySide6.QtGui",
+        "PySide6.QtNetwork",
+        "PySide6.QtConcurrent",
         "zmq",
         "cv2",
         "numpy",
@@ -102,10 +124,12 @@ a = Analysis(
         "torch",
         "cyclonedds",
         "unitree_sdk2py",
+        "unitree_sdk2py.core",
     ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
+    binaries=extra_binaries,
     excludes=["tkinter", "matplotlib", "meshcat", "rerun_sdk", "rerun"],
     noarchive=False,
 )

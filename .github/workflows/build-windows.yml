@@ -1,0 +1,130 @@
+name: Build Windows Package
+
+# Produces the real, downloadable Windows installer + portable zip on
+# GitHub's windows-latest runners.  Artifacts are attached to every run
+# and published as a GitHub Release when a tag (v*) is pushed.
+#
+# Trigger manually (Actions tab → "Run workflow") or by pushing a v* tag.
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+    branches:
+      - main
+      - 'base44/**'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Set up Miniforge / Conda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-variant: Miniforge3
+          miniforge-version: latest
+          use-mamba: true
+          activate-environment: xr_teleoperate
+          environment-file: environment-windows.yml
+          auto-activate-base: false
+
+      - name: Install pip dependencies + build tools
+        shell: pwsh
+        run: |
+          pip install -r requirements-windows.txt
+          pip install PySide6 pyinstaller qrcode Pillow
+
+      - name: Install submodule packages
+        shell: pwsh
+        run: |
+          Push-Location teleop\teleimager;    pip install -e . --no-deps; Pop-Location
+          Push-Location teleop\televuer;      pip install -e .;            Pop-Location
+          Push-Location teleop\robot_control\dex-retargeting; pip install -e .; Pop-Location
+
+      - name: Install unitree_sdk2_python
+        shell: pwsh
+        run: |
+          git clone --depth 1 https://github.com/unitreerobotics/unitree_sdk2_python.git ../unitree_sdk2_python
+          Push-Location ../unitree_sdk2_python; pip install -e .; Pop-Location
+
+      - name: Generate app icon
+        shell: pwsh
+        run: python packaging/windows/generate_icon.py
+
+      - name: Generate SSL certificates
+        shell: pwsh
+        run: python -c "from teleop.platform.certs import ensure_certificates; ensure_certificates()"
+
+      - name: Build with PyInstaller
+        shell: pwsh
+        run: |
+          if (Test-Path dist\UnitreeXRTeleoperate) { Remove-Item -Recurse -Force dist\UnitreeXRTeleoperate }
+          if (Test-Path build) { Remove-Item -Recurse -Force build }
+          pyinstaller packaging/windows/unitree_xr_teleoperate.spec --noconfirm
+
+      - name: Smoke-test packaged executable
+        shell: pwsh
+        run: |
+          $exe = "dist\UnitreeXRTeleoperate\UnitreeXRTeleoperate.exe"
+          if (-not (Test-Path $exe)) { Write-Error "Bundle exe not found"; exit 1 }
+          & $exe --check
+          if ($LASTEXITCODE -ne 0) { Write-Error "Smoke test failed"; exit 1 }
+
+      - name: Create portable zip
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "dist\UnitreeXRTeleoperate\*" `
+            -DestinationPath "dist/UnitreeXRTeleoperatePortable.zip" -CompressionLevel Optimal
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH","User")
+          iscc packaging\installer\unitree_xr_teleoperate.iss
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: UnitreeXRTeleoperateSetup
+          path: dist/installer/UnitreeXRTeleoperateSetup.exe
+          if-no-files-found: error
+
+      - name: Upload portable zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: UnitreeXRTeleoperatePortable
+          path: dist/UnitreeXRTeleoperatePortable.zip
+          if-no-files-found: error
+
+      - name: Upload bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: UnitreeXRTeleoperate-bundle
+          path: dist/UnitreeXRTeleoperate/
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = ${env:GITHUB_REF}.Replace("refs/tags/","")
+          gh release create $tag `
+            "dist/installer/UnitreeXRTeleoperateSetup.exe" `
+            "dist/UnitreeXRTeleoperatePortable.zip" `
+            --title "Unitree XR Teleoperate $tag" `
+            --notes "Automated Windows build. Download UnitreeXRTeleoperateSetup.exe to install, or UnitreeXRTeleoperatePortable.zip for a no-install portable version."

@@ -155,7 +155,28 @@ def _build_page() -> str:
     communicates via ZMQ IPC.</p>
     <p style="margin-top:0.5rem">The actual desktop application requires a display server and robot
     hardware. This page shows the development/test status.</p>
-    <a class="download-btn" href="/download">⬇ Download Windows Package (xr-edi-windows.zip)</a>
+    <a class="download-btn" href="/download">⬇ Download Source Package (xr-edi-windows.zip)</a>
+  </div>
+
+  <div class="card">
+    <h2>Windows Installer (UnitreeXRTeleoperateSetup.exe)</h2>
+    <p>The complete standalone Windows installer and portable zip are built
+    automatically by GitHub Actions on real <strong>windows-latest</strong>
+    runners. The build bundles the Python runtime, Unitree SDK, CycloneDDS,
+    Pinocchio, NLopt, OpenCV, ZMQ, PyTorch, PySide6/Qt, WebRTC, and all
+    required DLLs into a single self-contained installer.</p>
+    <p style="margin-top:0.5rem">After a build completes, download the finished
+    artifacts from the GitHub Actions run page (Artifacts section) or from the
+    Releases page if a version tag was pushed.</p>
+    <div style="margin-top:0.75rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+      <a class="download-btn" href="https://github.com/AminAdineh/xr_teleoperate/actions/workflows/build-windows.yml" target="_blank">📦 CI Build Runs</a>
+      <a class="download-btn" href="https://github.com/AminAdineh/xr_teleoperate/releases" target="_blank">🏷️ Releases</a>
+    </div>
+    <p class="muted" style="margin-top:0.5rem; font-size:0.8rem;">
+      To trigger a build: push a tag like <code>v1.0.0</code>, or go to the
+      Actions tab → "Build Windows Package" → "Run workflow". The installer
+      and portable zip appear as downloadable artifacts within ~15 min.
+    </p>
   </div>
 
   <div class="card">

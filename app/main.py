@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import logging
 import os
+import subprocess
 import sys
 import traceback
 from pathlib import Path
@@ -85,7 +86,97 @@ def _load_stylesheet(app) -> str:
     return ""
 
 
+def _run_dependency_check() -> int:
+    """Headless dependency check — used by the installer and CI smoke test."""
+    print(f"{__app_name__} v{__version__}")
+    print(f"Python {sys.version} on {sys.platform}")
+    print()
+    deps = [
+        ("NumPy", "numpy"), ("SciPy", "scipy"), ("CasADi", "casadi"),
+        ("OpenCV", "cv2"), ("PyZMQ", "zmq"), ("PyYAML", "yaml"),
+        ("PyTorch", "torch"), ("psutil", "psutil"), ("Pinocchio", "pinocchio"),
+        ("NLopt", "nlopt"), ("PySide6", "PySide6"), ("pytransform3d", "pytransform3d"),
+        ("trimesh", "trimesh"), ("anytree", "anytree"), ("lxml", "lxml"),
+    ]
+    missing = []
+    for name, mod in deps:
+        try:
+            __import__(mod)
+            print(f"  [OK]   {name}")
+        except ImportError:
+            print(f"  [FAIL] {name}")
+            missing.append(name)
+    for name, mod in [("televuer", "televuer"), ("teleimager", "teleimager"),
+                      ("dex-retargeting", "dex_retargeting"),
+                      ("unitree_sdk2_python", "unitree_sdk2py.core"),
+                      ("cyclonedds", "cyclonedds.core")]:
+        try:
+            __import__(mod)
+            print(f"  [OK]   {name}")
+        except ImportError:
+            print(f"  [FAIL] {name}")
+            missing.append(name)
+    print()
+    if missing:
+        print(f"FAILED: {len(missing)} missing dependency(ies): {', '.join(missing)}")
+        return 1
+    print("All dependencies present.")
+    return 0
+
+
+def _configure_firewall(remove: bool = False) -> int:
+    """Add or remove Windows Defender firewall rules (requires admin)."""
+    if sys.platform != "win32":
+        print("Firewall configuration is Windows-only.")
+        return 0
+    import ctypes
+    if not ctypes.windll.shell32.IsUserAnAdmin():
+        print("ERROR: firewall configuration requires administrator privileges.")
+        return 1
+    rules = [
+        ("xr_teleoperate HTTPS/WebRTC signaling", "8012", "TCP", "in"),
+        ("xr_teleoperate Teleimager config", "60000", "TCP", "in"),
+        ("xr_teleoperate DDS multicast", "7400", "UDP", "in"),
+        ("xr_teleoperate DDS unicast range", "7401-7500", "UDP", "in"),
+        ("xr_teleoperate WebRTC media", "49152-65535", "UDP", "in"),
+    ]
+    action = "delete" if remove else "add"
+    verb = "Removing" if remove else "Adding"
+    for name, port, proto, direction in rules:
+        if remove:
+            subprocess.run(
+                ["netsh", "advfirewall", "firewall", "delete", "rule",
+                 f"name={name}"],
+                capture_output=True, timeout=10,
+            )
+        else:
+            subprocess.run(
+                ["netsh", "advfirewall", "firewall", "add", "rule",
+                 f"name={name}", f"dir={direction}", "action=allow",
+                 f"protocol={proto}", f"localport={port}"],
+                capture_output=True, timeout=10,
+            )
+        print(f"  {verb}: {name} ({proto}/{port})")
+    print("Firewall configuration complete.")
+    return 0
+
+
 def main():
+    # --- CLI modes (no GUI) ------------------------------------------------
+    if "--version" in sys.argv:
+        print(f"{__app_name__} v{__version__}")
+        sys.exit(0)
+
+    if "--check" in sys.argv:
+        sys.exit(_run_dependency_check())
+
+    if "--firewall" in sys.argv:
+        sys.exit(_configure_firewall(remove=False))
+
+    if "--firewall-remove" in sys.argv:
+        sys.exit(_configure_firewall(remove=True))
+
+    # --- Normal GUI launch ------------------------------------------------
     # Single-instance check
     if not _check_single_instance():
         _show_already_running_dialog()
