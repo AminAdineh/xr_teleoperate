@@ -26,7 +26,7 @@ pyzmq>=25.0.0
 pyyaml>=6.0
 
 # Logging
-logging-mp>=0.3.0
+logging-mp>=0.2.0
 
 # SSH keyboard (terminal input)
 sshkeyboard>=2.3.1

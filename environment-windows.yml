@@ -33,7 +33,7 @@ dependencies:
   # Pip-only packages (no conda package or specific version needed)
   - pip:
     - meshcat>=0.3.2
-    - logging-mp>=0.3.0
+    - logging-mp>=0.2.0
     - sshkeyboard>=2.3.1
     - vuer[all]==0.0.60
     - rerun-sdk>=0.20.0
