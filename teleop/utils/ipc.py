@@ -6,9 +6,9 @@ import logging_mp
 logger_mp = logging_mp.getLogger(__name__)
 
 # Cross-platform IPC transport (ipc:// on Linux, tcp:// on Windows)
-import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from platform.ipc_transport import get_ipc_endpoint
+# IMPORTANT: use teleop.platform, NOT bare "platform" — the latter shadows
+# the Python standard-library "platform" module for the entire process.
+from teleop.platform.ipc_transport import get_ipc_endpoint, get_ipc_endpoint_with_retry, record_bound_port
 
 """
 # Client → Server (Request)
@@ -94,14 +94,18 @@ class IPC_Server:
 
         self.ctx = zmq.Context.instance()
         self.rep_socket = self.ctx.socket(zmq.REP)
-        self._data_endpoint = get_ipc_endpoint("xr_teleoperate_data")
+        self.rep_socket.setsockopt(zmq.LINGER, 0)
+        self._data_endpoint, data_port = get_ipc_endpoint_with_retry("xr_teleoperate_data")
         self.rep_socket.bind(self._data_endpoint)
+        record_bound_port("xr_teleoperate_data", data_port)
         logger_mp.info(f"[IPC_Server] Listening to Data at {self._data_endpoint}")
 
         # heartbeat IPC (PUB/SUB)
         self.pub_socket = self.ctx.socket(zmq.PUB)
-        self._hb_endpoint = get_ipc_endpoint("xr_teleoperate_hb")
+        self.pub_socket.setsockopt(zmq.LINGER, 0)
+        self._hb_endpoint, hb_port = get_ipc_endpoint_with_retry("xr_teleoperate_hb")
         self.pub_socket.bind(self._hb_endpoint)
+        record_bound_port("xr_teleoperate_hb", hb_port)
         logger_mp.info(f"[IPC_Server] Publishing HeartBeat at {self._hb_endpoint}")
 
     def _data_loop(self):
@@ -219,6 +223,7 @@ class IPC_Client:
 
         self.sub_socket = self.ctx.socket(zmq.SUB)
         self.sub_socket.setsockopt(zmq.RCVHWM, 1)
+        self.sub_socket.setsockopt(zmq.LINGER, 0)
         self._hb_endpoint = get_ipc_endpoint("xr_teleoperate_hb")
         self.sub_socket.connect(self._hb_endpoint)
         self.sub_socket.setsockopt_string(zmq.SUBSCRIBE, "")
@@ -229,6 +234,7 @@ class IPC_Client:
 
         # data IPC (REQ/REP)
         self.req_socket = self.ctx.socket(zmq.REQ)
+        self.req_socket.setsockopt(zmq.LINGER, 0)
         self._data_endpoint = get_ipc_endpoint("xr_teleoperate_data")
         self.req_socket.connect(self._data_endpoint)
         logger_mp.info(f"[IPC_Client] Connected to Data at {self._data_endpoint}")

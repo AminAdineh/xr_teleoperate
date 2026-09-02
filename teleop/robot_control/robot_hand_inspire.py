@@ -45,6 +45,7 @@ class Inspire_Controller_DFX:
         self.right_hand_state_array = Array('d', Inspire_Num_Motors, lock=True)
 
         # initialize subscribe thread
+        self._running = True
         self.subscribe_state_thread = threading.Thread(target=self._subscribe_hand_state)
         self.subscribe_state_thread.daemon = True
         self.subscribe_state_thread.start()
@@ -60,11 +61,21 @@ class Inspire_Controller_DFX:
                                                                           dual_hand_data_lock, dual_hand_state_array, dual_hand_action_array, xr_motion_data_ready_in))
         hand_control_process.daemon = True
         hand_control_process.start()
+        self._hand_process = hand_control_process
 
         logger_mp.info("Initialize Inspire_Controller_DFX OK!")
 
+    def stop(self):
+        """Stop the controller: signal control loop and subscribe thread to exit."""
+        self.running = False
+        self._running = False
+        if hasattr(self, 'subscribe_state_thread'):
+            self.subscribe_state_thread.join(timeout=1.0)
+        if hasattr(self, '_hand_process'):
+            self._hand_process.join(timeout=2.0)
+
     def _subscribe_hand_state(self):
-        while True:
+        while self._running:
             hand_msg  = self.HandState_subscriber.Read()
             if hand_msg is not None:
                 for idx, id in enumerate(Inspire_Left_Hand_JointIndex):
@@ -201,6 +212,7 @@ class Inspire_Controller_FTP:
         self.right_hand_state_array = Array('d', Inspire_Num_Motors, lock=True)
 
         # Initialize subscribe thread
+        self._running = True
         self.subscribe_state_thread = threading.Thread(target=self._subscribe_hand_state)
         self.subscribe_state_thread.daemon = True
         self.subscribe_state_thread.start()
@@ -221,12 +233,22 @@ class Inspire_Controller_FTP:
                                                                           dual_hand_data_lock, dual_hand_state_array, dual_hand_action_array, xr_motion_data_ready_in))
         hand_control_process.daemon = True
         hand_control_process.start()
+        self._hand_process = hand_control_process
 
         logger_mp.info("Initialize Inspire_Controller_FTP OK!\n")
 
+    def stop(self):
+        """Stop the controller: signal control loop and subscribe thread to exit."""
+        self.running = False
+        self._running = False
+        if hasattr(self, 'subscribe_state_thread'):
+            self.subscribe_state_thread.join(timeout=1.0)
+        if hasattr(self, '_hand_process'):
+            self._hand_process.join(timeout=2.0)
+
     def _subscribe_hand_state(self):
         logger_mp.info("[Inspire_Controller_FTP] Subscribe thread started.")
-        while True:
+        while self._running:
             # Left Hand
             left_state_msg = self.LeftHandState_subscriber.Read()
             if left_state_msg is not None:

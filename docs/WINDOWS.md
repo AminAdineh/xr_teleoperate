@@ -15,46 +15,65 @@ This guide walks you through setting up and running **xr_teleoperate** on a nati
 
 ### Software
 - **Miniconda or Anaconda** ([download](https://docs.conda.io/en/latest/miniconda.html))
-- **Git for Windows** ([download](https://git-scm.com/download/win))
-- **OpenSSL** (included with Git for Windows, or install separately)
+- **Git for Windows** ([download](https://git-scm.com/download/win)) — includes OpenSSL
 
 ---
 
-## 2. Installation
+## 2. Installation (from clean Windows 11)
 
-### 2.1 Clone the repository
+### 2.1 Clone and install
 
 ```powershell
 git clone https://github.com/unitreerobotics/xr_teleoperate.git
 cd xr_teleoperate
 git submodule update --init --depth 1
-```
-
-### 2.2 Automated installation (recommended)
-
-```powershell
 .\scripts\install_windows.ps1
 ```
 
-This script will:
+The install script will:
 1. Check Windows version and architecture
 2. Verify Conda and Git are installed
 3. Create a conda environment named `xr_teleoperate`
 4. Install all dependencies (Pinocchio, NLopt via conda; others via pip)
 5. Initialize git submodules and install local packages
-6. Generate SSL certificates
-7. Run the Windows diagnostics tool
+6. Clone and install `unitree_sdk2_python` (if not present)
+7. Generate SSL certificates with the PC's LAN IP
+8. Run the Windows diagnostics tool
 
-### 2.3 Manual installation
+### 2.2 Verify installation
 
-If you prefer to install step by step:
+```powershell
+python tools\windows_diagnostics.py
+```
+
+This checks:
+- Windows version and architecture
+- Python version and architecture
+- Conda environment
+- CPU and GPU
+- Network adapters
+- Robot IP reachability
+- All Python dependencies
+- Native DLL loading (use `--dll-check`)
+- DDS initialization
+- ZMQ IPC transport
+- SSL certificates
+- Firewall rules
+- Process/thread model
+
+With a robot connected:
+```powershell
+python tools\windows_diagnostics.py --robot-ip 192.168.123.164 --dds-test
+```
+
+### 2.3 Manual installation (if automated script fails)
 
 ```powershell
 # Create conda environment
 conda create -n xr_teleoperate python=3.10 -y
 conda activate xr_teleoperate
 
-# Install conda packages (Pinocchio, NLopt, etc.)
+# Install conda packages
 conda install pinocchio nlopt numpy scipy casadi opencv pyzmq pyyaml matplotlib psutil -c conda-forge -y
 
 # Install pip packages
@@ -81,24 +100,10 @@ git clone https://github.com/unitreerobotics/unitree_sdk2_python.git ..\unitree_
 cd ..\unitree_sdk2_python
 pip install -e .
 cd ..\xr_teleoperate
+
+# Generate SSL certificates
+python -c "from teleop.platform.certs import ensure_certificates, print_certificate_instructions; ensure_certificates(); print_certificate_instructions()"
 ```
-
-### 2.4 Generate SSL certificates
-
-XR devices connect via HTTPS/WebRTC, which requires SSL certificates.
-
-```powershell
-# Create certificate directory
-mkdir $env:APPDATA\xr_teleoperate
-
-# Generate self-signed certificate
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 `
-  -keyout $env:APPDATA\xr_teleoperate\key.pem `
-  -out $env:APPDATA\xr_teleoperate\cert.pem `
-  -subj "/CN=localhost"
-```
-
-For **Apple Vision Pro**, you need a CA-signed certificate. See the [upstream README](../README.md) for the full certificate procedure.
 
 ---
 
@@ -138,28 +143,66 @@ Run in an **elevated PowerShell prompt** (Run as Administrator):
 .\scripts\setup_windows.ps1
 ```
 
-This adds firewall rules for the required ports:
-- **8012/tcp** — Televuer HTTPS/WebRTC signaling
-- **60000/tcp** — Teleimager camera config request
-- **60100/tcp** — IPC data channel (Windows fallback)
-- **60101/tcp** — IPC heartbeat channel (Windows fallback)
+**Required ports:**
+
+| Port | Protocol | Purpose | Scope |
+|------|----------|---------|-------|
+| 8012 | TCP | Televuer HTTPS/WebRTC signaling | LAN |
+| 60000 | TCP | Teleimager camera config request | LAN |
+| 60100 | TCP | IPC data channel (Windows) | localhost only |
+| 60101 | TCP | IPC heartbeat channel (Windows) | localhost only |
+| 7400-7500 | UDP | DDS multicast/unicast discovery | LAN |
+| 49152-65535 | UDP | WebRTC media (dynamic) | LAN |
+
+**Note:** DDS uses UDP multicast on port 7400 by default. The firewall must
+allow UDP traffic on the robot network interface. If you have virtual adapters
+(Docker, VMware, Hyper-V, WSL), DDS may try to use them — use `--network-interface`
+to force the correct adapter.
 
 ---
 
-## 4. XR Device Setup
+## 4. SSL Certificates
 
-### Meta Quest 3 / PICO 4 Ultra
-1. Put on the headset and open the web browser
-2. Navigate to `https://<your-pc-ip>:8012` (e.g., `https://192.168.123.2:8012`)
+XR devices connect via HTTPS, which requires SSL certificates.
+
+### 4.1 Automatic generation
+
+The install script generates certificates automatically. To regenerate:
+
+```powershell
+python -m teleop.platform.certs --regenerate
+```
+
+The certificate includes:
+- **CN**: The PC's LAN IP address
+- **SAN**: localhost, 127.0.0.1, and all detected LAN IPs
+
+### 4.2 Certificate location
+
+- **Windows**: `%APPDATA%\xr_teleoperate\cert.pem` and `key.pem`
+- **Linux**: `~/.config/xr_teleoperate/cert.pem` and `key.pem`
+
+### 4.3 Browser trust
+
+**Meta Quest 3 / PICO 4 Ultra:**
+1. Open the browser on the headset
+2. Navigate to `https://<your-pc-ip>:8012`
 3. Accept the self-signed certificate warning
-4. Grant WebXR permissions when prompted
+4. Grant WebXR permissions
 
-### Apple Vision Pro
-1. Install the root CA certificate on the Vision Pro (via AirDrop or Safari)
-2. Open Safari and navigate to `https://<your-pc-ip>:8012`
-3. Grant WebXR permissions
+**Apple Vision Pro:**
+1. A CA-signed certificate is required (self-signed will NOT work)
+2. Install the root CA certificate on the Vision Pro
+3. Open Safari and navigate to `https://<your-pc-ip>:8012`
+4. Grant WebXR permissions
 
-See the [upstream README](../README.md) for detailed XR device instructions.
+See the [upstream README](../README.md) for the full Vision Pro certificate procedure.
+
+### 4.4 When the IP changes
+
+If your PC's IP address changes (e.g., DHCP reassignment):
+1. Regenerate certificates: `python -m teleop.platform.certs --regenerate`
+2. Or delete the certificate files and restart the application
 
 ---
 
@@ -191,140 +234,107 @@ python teleop\teleop_hand_and_arm.py --arm R1_A5 --ee dex3 --network-interface E
 - **[s]** — Start/stop recording (toggle)
 - **[q]** — Stop and exit
 
----
-
-## 6. Simulation Mode
-
-Simulation uses NVIDIA Isaac Sim and requires a CUDA GPU.
+### Simulation mode
 
 ```powershell
 conda activate xr_teleoperate
-
-# Simulation mode (requires Isaac Sim running)
 python teleop\teleop_hand_and_arm.py --arm G1_29 --ee dex3 --sim --network-interface Ethernet
 ```
 
----
-
-## 7. Recording
-
-```powershell
-conda activate xr_teleoperate
-
-# Record with task metadata
-python teleop\teleop_hand_and_arm.py --arm G1_29 --ee dex3 --record `
-  --task-name "pick cube" `
-  --task-goal "pick up the red cube" `
-  --task-desc "reach and grasp" `
-  --task-steps "step1: reach; step2: grasp; step3: lift" `
-  --network-interface Ethernet
-```
-
-Recordings are saved to `./utils/data/<task-name>/episode_XXXX/`.
+Simulation requires NVIDIA Isaac Sim and a CUDA GPU.
 
 ---
 
-## 8. Diagnostics
+## 6. Diagnostics and Troubleshooting
 
-Run the Windows diagnostics tool to check your system:
-
-```powershell
-python tools\windows_diagnostics.py
-```
-
-With a specific robot IP:
+### Network diagnostics
 
 ```powershell
+# List network interfaces
+python teleop\teleop_hand_and_arm.py --list-interfaces
+
+# Check robot reachability
 python tools\windows_diagnostics.py --robot-ip 192.168.123.164
+
+# Full diagnostics with DDS test
+python tools\windows_diagnostics.py --robot-ip 192.168.123.164 --dds-test
 ```
 
-This checks:
-- Windows version and architecture
-- Python version and architecture
-- Conda environment
-- CPU and GPU
-- Network adapters
-- Robot IP reachability
-- All Python dependencies
-- DDS initialization
-- SSL certificates
-- Firewall rules
+### DLL validation
 
----
+```powershell
+python tools\windows_diagnostics.py --dll-check
+```
 
-## 9. Troubleshooting
+This checks that all native libraries (CycloneDDS, Pinocchio, CasADi, NLopt)
+are loadable and reports the DLL path for each.
 
-### "Failed to subscribe dds within 5.0 seconds"
+### Timing validation
+
+```powershell
+python tools\timing_monitor.py --frequency 30 --duration 60
+```
+
+### Numerical validation
+
+```powershell
+python tools\numerical_validation.py --output windows_results.json
+```
+
+### Common issues
+
+#### "Failed to subscribe dds within 5.0 seconds"
 - The robot is not reachable or DDS cannot bind to the network interface
 - Check: `python teleop\teleop_hand_and_arm.py --list-interfaces`
 - Verify the robot is powered on and connected via Ethernet
 - Try specifying the interface: `--network-interface Ethernet`
 - Check firewall: `.\scripts\setup_windows.ps1` (as Administrator)
+- Check for virtual adapters (Docker, VMware, Hyper-V) that may interfere with DDS
 
-### "ModuleNotFoundError: No module named 'unitree_sdk2py'"
-- Install the Unitree SDK:
-  ```powershell
-  git clone https://github.com/unitreerobotics/unitree_sdk2_python.git ..\unitree_sdk2_python
-  cd ..\unitree_sdk2_python
-  pip install -e .
-  ```
+#### "ModuleNotFoundError: No module named 'unitree_sdk2py'"
+```powershell
+git clone https://github.com/unitreerobotics/unitree_sdk2_python.git ..\unitree_sdk2_python
+cd ..\unitree_sdk2_python
+pip install -e .
+```
 
-### "ModuleNotFoundError: No module named 'pinocchio'"
-- Install via conda: `conda install pinocchio -c conda-forge`
-- Pinocchio is NOT available via pip on Windows
+#### "ModuleNotFoundError: No module named 'pinocchio'"
+```powershell
+conda install pinocchio -c conda-forge
+```
+Pinocchio is NOT available via pip on Windows.
 
-### "ModuleNotFoundError: No module named 'televuer'"
-- Install the submodule: `cd teleop\televuer && pip install -e .`
+#### "DLL load failed" or "The specified module could not be found"
+- Ensure you're using 64-bit Python: `python -c "import platform; print(platform.architecture())"`
+- Reinstall the failing package via conda: `conda install <package> -c conda-forge`
+- Run DLL diagnostics: `python tools\windows_diagnostics.py --dll-check`
 
-### "SSL certificate not found"
-- Generate certificates:
-  ```powershell
-  mkdir $env:APPDATA\xr_teleoperate
-  openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout $env:APPDATA\xr_teleoperate\key.pem -out $env:APPDATA\xr_teleoperate\cert.pem -subj "/CN=localhost"
-  ```
+#### "SSL certificate not found"
+```powershell
+python -c "from teleop.platform.certs import ensure_certificates; ensure_certificates()"
+```
 
-### "ZMQ error: Protocol not supported"
-- This should not happen after the Windows port. The IPC transport automatically uses TCP on Windows.
-- If you see this, ensure you're using the Windows-compatible code (not the upstream Linux-only version).
+#### "ZMQ error: Protocol not supported"
+- This should not happen after the Windows port. If it does, ensure
+  `teleop.platform.ipc_transport` is being imported correctly.
+- Check: `python -c "from teleop.platform.ipc_transport import get_ipc_endpoint; print(get_ipc_endpoint('test'))"`
 
-### XR device cannot connect
-- Verify the PC's IP address on the robot network: `ipconfig`
-- Open `https://<your-pc-ip>:8012` in the XR browser
-- Check firewall rules: `.\scripts\setup_windows.ps1`
-- Verify SSL certificates are generated and accessible
+#### "Address already in use" (ZMQ bind error)
+- A previous instance may not have shut down cleanly
+- Wait 30 seconds for TIME_WAIT to expire, or:
+- The IPC transport module will automatically retry on the next available port
 
-### "ConnectionRefusedError: [WinError 1225]"
-- The IPC TCP fallback port is blocked or in use
-- Check: `netstat -an | findstr 60100`
-- Restart the application
-
-### Process crashes or hangs on exit
-- Press **Ctrl+C** to trigger graceful shutdown
-- The application cleans up DDS connections, image clients, and XR connections in the `finally` block
-- If it hangs, close the terminal window (daemon threads will be cleaned up)
+#### XR device cannot connect
+- Verify the PC's LAN IP: `python -c "from teleop.platform.certs import get_lan_ip; print(get_lan_ip())"`
+- Ensure the XR device is on the same network
+- Check firewall rules for port 8012
+- Verify the certificate includes the PC's LAN IP in the SAN
 
 ---
 
-## 10. Platform-Specific Notes
+## 7. See also
 
-### IPC Transport
-On Linux, the application uses ZMQ's `ipc://` transport with abstract Unix sockets.
-On Windows, ZMQ does not support `ipc://`, so the application automatically falls back to
-`tcp://127.0.0.1` on fixed ports (60100, 60101). This is transparent to the user.
-
-### Multiprocessing
-On Linux, the application uses `multiprocessing.Process` (fork-based) for hand controller
-and Vuer server processes. On Windows, these are replaced with `threading.Thread` to avoid
-pickling issues with the spawn-based multiprocessing model. This does not affect robot
-control behavior — the same control loops run at the same frequencies.
-
-### Certificate Paths
-- **Linux**: `~/.config/xr_teleoperate/cert.pem`
-- **Windows**: `%APPDATA%/xr_teleoperate/cert.pem`
-- **Environment variables**: `XR_TELEOP_CERT` and `XR_TELEOP_KEY` override the default paths
-
-### Image Server
-The `teleimager` image server (`image_server.py`) runs **on the robot** (Linux), not on the
-Windows host PC. The Windows host PC only uses the `image_client.py` to receive images via ZMQ.
-The image server's Linux-specific code (UVC camera paths, modprobe, etc.) does not need to
-be ported to Windows.
+- [Windows Compatibility Matrix](WINDOWS_COMPATIBILITY.md) — detailed component status
+- [Windows Test Results](WINDOWS_TEST_RESULTS.md) — test matrix with evidence
+- [Hardware Validation Checklist](WINDOWS_HARDWARE_CHECKLIST.md) — physical robot test procedure
+- [Upstream README](../README.md) — original Linux documentation

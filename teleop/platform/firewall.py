@@ -4,6 +4,7 @@ Cross-platform firewall instructions and helpers.
 On Linux: ufw commands
 On Windows: netsh advfirewall commands (requires admin privileges)
 """
+import os
 import sys
 import logging
 import subprocess
@@ -17,6 +18,8 @@ REQUIRED_PORTS = [
     (60000, "tcp", "Teleimager camera config request"),
     (60100, "tcp", "IPC data channel (Windows fallback)"),
     (60101, "tcp", "IPC heartbeat channel (Windows fallback)"),
+    (7400, "udp", "DDS multicast discovery"),
+    (7401, "udp", "DDS unicast range start"),
 ]
 
 

@@ -84,6 +84,7 @@ class Dex3_1_Controller:
         self.right_hand_state_array = Array('d', Dex3_Num_Motors, lock=True)
 
         # initialize subscribe thread
+        self._running = True
         self.subscribe_state_thread = threading.Thread(target=self._subscribe_hand_state)
         self.subscribe_state_thread.daemon = True
         self.subscribe_state_thread.start()
@@ -99,11 +100,21 @@ class Dex3_1_Controller:
                                                                           dual_hand_data_lock, dual_hand_state_array_out, dual_hand_action_array_out, xr_motion_data_ready_in))
         hand_control_process.daemon = True
         hand_control_process.start()
+        self._hand_process = hand_control_process
 
         logger_mp.info("Initialize Dex3_1_Controller OK!")
 
+    def stop(self):
+        """Stop the controller: signal control loop and subscribe thread to exit."""
+        self.running = False
+        self._running = False
+        if hasattr(self, 'subscribe_state_thread'):
+            self.subscribe_state_thread.join(timeout=1.0)
+        if hasattr(self, '_hand_process'):
+            self._hand_process.join(timeout=2.0)
+
     def _subscribe_hand_state(self):
-        while True:
+        while self._running:
             left_hand_msg  = self.LeftHandState_subscriber.Read()
             right_hand_msg = self.RightHandState_subscriber.Read()
             if left_hand_msg is not None and right_hand_msg is not None:
@@ -290,6 +301,7 @@ class Dex1_1_Gripper_Controller:
         self.right_gripper_state_value = Value('d', 0.0, lock=True)
 
         # initialize subscribe thread
+        self._running = True
         self.subscribe_state_thread = threading.Thread(target=self._subscribe_gripper_state)
         self.subscribe_state_thread.daemon = True
         self.subscribe_state_thread.start()
@@ -306,8 +318,17 @@ class Dex1_1_Gripper_Controller:
 
         logger_mp.info("Initialize Dex1_1_Gripper_Controller OK!")
 
+    def stop(self):
+        """Stop the controller: signal control thread and subscribe thread to exit."""
+        self.running = False
+        self._running = False
+        if hasattr(self, 'subscribe_state_thread'):
+            self.subscribe_state_thread.join(timeout=1.0)
+        if hasattr(self, 'gripper_control_thread'):
+            self.gripper_control_thread.join(timeout=2.0)
+
     def _subscribe_gripper_state(self):
-        while True:
+        while self._running:
             left_gripper_msg  = self.LeftGripperState_subscriber.Read()
             right_gripper_msg  = self.RightGripperState_subscriber.Read()
             if left_gripper_msg is not None and right_gripper_msg is not None:

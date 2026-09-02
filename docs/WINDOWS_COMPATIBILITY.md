@@ -1,87 +1,125 @@
 # Windows 11 Compatibility Matrix
 
-This document tracks the compatibility status of each component with Windows 11.
+This document uses precise status definitions. We do NOT claim compatibility
+without actual testing.
 
-| Component | Linux | Windows 11 | Solution | Status |
-|-----------|-------|------------|----------|--------|
-| Python 3.10 | ✅ | ✅ | Native | **Validated** |
-| NumPy | ✅ | ✅ | Native (pip/conda) | **Validated** |
-| SciPy | ✅ | ✅ | Native (pip/conda) | **Validated** |
-| CasADi | ✅ | ✅ | Native (pip/conda) | **Validated** |
-| OpenCV | ✅ | ✅ | Native (pip) | **Validated** |
-| PyZMQ | ✅ | ✅ | Native (pip/conda) | **Validated** |
-| PyYAML | ✅ | ✅ | Native (pip/conda) | **Validated** |
-| Pinocchio | ✅ | ✅ | conda-forge | **Validated** (conda install pinocchio -c conda-forge) |
-| NLopt | ✅ | ✅ | conda-forge | **Validated** (conda install nlopt -c conda-forge) |
-| PyTorch | ✅ | ✅ | Native (pip) | **Validated** |
-| MeshCat | ✅ | ✅ | Native (pip) | **Validated** |
-| Rerun SDK | ✅ | ✅ | Native (pip) | **Validated** |
-| psutil | ✅ | ✅ | Native (pip/conda) | **Validated** |
-| sshkeyboard | ✅ | ✅ | Native (pip) | **Validated** |
-| logging_mp | ✅ | ✅ | Native (pip) | **Validated** |
-| PyTransform3D | ✅ | ✅ | Native (pip) | **Validated** |
-| Trimesh | ✅ | ✅ | Native (pip) | **Validated** |
-| Anytree | ✅ | ✅ | Native (pip) | **Validated** |
-| LXML | ✅ | ✅ | Native (pip) | **Validated** |
-| Vuer | ✅ | ✅ | Native (pip) | **Validated** (vuer[all]==0.0.60) |
-| aiortc | ✅ | ✅ | Native (pip) | **Validated** (server-side only) |
-| aiohttp | ✅ | ✅ | Native (pip/conda) | **Validated** |
-| Unitree SDK | ✅ | ✅ | Native (pip install -e .) | **Validated** (cyclonedds has Windows wheels) |
-| CycloneDDS | ✅ | ✅ | Native (cyclonedds pip package) | **Validated** |
-| DDS Communication | ✅ | ✅ | Native CycloneDDS | **Validated** (network interface selection works) |
-| Televuer | ✅ | ✅ | Ported | **Validated** (Process→Thread on Windows, cert paths fixed) |
-| Teleimager (client) | ✅ | ✅ | Native (ZMQ over TCP) | **Validated** |
-| Teleimager (server) | ✅ | N/A | Runs on robot (Linux) | **Not needed on Windows host** |
-| WebRTC | ✅ | ✅ | Native (aiortc) | **Validated** |
-| XR (Quest/PICO/AVP) | ✅ | ✅ | Browser-based WebXR | **Validated** (HTTPS + WebRTC) |
-| Simulation (Isaac Sim) | ✅ | ✅ | NVIDIA Isaac Sim for Windows | **Requires GPU** |
-| Recording | ✅ | ✅ | Ported (pathlib, os.path.join) | **Validated** |
-| IPC (ZMQ ipc://) | ✅ | ✅ | TCP fallback on Windows | **Validated** (tcp://127.0.0.1:60100/60101) |
-| Multiprocessing | ✅ | ✅ | Thread fallback on Windows | **Validated** (spawn-safe) |
-| CPU Affinity | ✅ | ✅ | psutil (cross-platform) | **Validated** |
-| Firewall | ufw | netsh | Platform-specific scripts | **Validated** (setup_windows.ps1) |
-| Certificate Paths | ~/.config/ | %APPDATA% | Platform abstraction | **Validated** |
-| Network Interface | eth0 | Ethernet | Platform abstraction (psutil) | **Validated** |
+**Status definitions:**
+- `SUPPORTED` — The feature is designed and implemented for Windows
+- `TESTED` — The feature has been validated on Windows 11 with evidence
+- `UNTESTED` — The feature is implemented but not yet validated on Windows
+- `PARTIAL` — The feature works with limitations
+- `BLOCKED` — The feature cannot work on Windows due to a known blocker
 
-## Key Differences from Linux
+---
 
-### 1. IPC Transport
-- **Linux**: ZMQ `ipc://@xr_teleoperate_data.ipc` (abstract Unix socket)
-- **Windows**: ZMQ `tcp://127.0.0.1:60100` (TCP loopback fallback)
-- **Impact**: None — same API, transparent to user code
+## Component Status
 
-### 2. Multiprocessing
-- **Linux**: `multiprocessing.Process` (fork-based) for hand controllers and Vuer server
-- **Windows**: `threading.Thread` (spawn-safe) for the same components
-- **Impact**: None — same control loops, same frequencies, same shared memory communication
-- **Reason**: Windows `spawn()` cannot pickle bound methods of objects containing DDS channels, ZMQ sockets, and Vuer instances
+| Component | Status | Notes |
+|-----------|--------|-------|
+| **Python runtime** | SUPPORTED | Python 3.10 64-bit required |
+| **NumPy / SciPy** | TESTED | Cross-platform, identical results |
+| **Pinocchio** | UNTESTED | Installed via conda-forge; native C++ lib with Python bindings. Requires validation on Windows |
+| **CasADi** | UNTESTED | Installed via conda-forge; IPOPT solver. Requires validation on Windows |
+| **NLopt** | UNTESTED | Installed via conda-forge. Requires validation on Windows |
+| **OpenCV** | SUPPORTED | pip install opencv-python provides Windows wheels |
+| **PyZMQ** | TESTED | TCP fallback for IPC works on Windows; ipc:// not supported |
+| **CycloneDDS** | UNTESTED | CycloneDDS supports Windows, but Unitree SDK binding requires validation |
+| **unitree_sdk2_python** | UNTESTED | Requires CycloneDDS native lib + DDS network. Must validate DLL loading and DDS discovery on Windows |
+| **Vuer (XR server)** | UNTESTED | HTTPS + WebSocket server; requires certificate + firewall config |
+| **WebRTC** | UNTESTED | aiortc for image streaming; requires UDP firewall rules |
+| **Meshcat** | SUPPORTED | Pure Python 3D visualization |
+| **Rerun SDK** | SUPPORTED | pip install rerun-sdk provides Windows wheels |
+| **psutil** | TESTED | Cross-platform process/network management |
+| **sshkeyboard** | SUPPORTED | Cross-platform keyboard input |
+| **logging-mp** | SUPPORTED | Cross-platform multiprocessing logging |
+| **PyTorch** | SUPPORTED | pip install torch provides Windows wheels |
+| **dex-retargeting** | UNTESTED | Pure Python (NumPy/PyTorch); should work but requires validation |
+| **teleimager** | PARTIAL | Image *client* works on Windows; image *server* uses Linux-specific /dev/video, modprobe, sysfs |
+| **televuer** | UNTESTED | Vuer server + WebRTC; requires HTTPS cert + XR device |
 
-### 3. Certificate Paths
-- **Linux**: `~/.config/xr_teleoperate/cert.pem`
-- **Windows**: `%APPDATA%/xr_teleoperate/cert.pem`
-- **Impact**: None — environment variables `XR_TELEOP_CERT`/`XR_TELEOP_KEY` override on both platforms
+---
 
-### 4. Image Server
-- **Linux**: `teleimager/image_server.py` runs on the robot (uses `/dev/videoX`, `modprobe`, etc.)
-- **Windows**: Not needed — the host PC only uses `image_client.py` (ZMQ subscriber, fully cross-platform)
-- **Impact**: None — image server runs on the robot's Linux system
+## Platform Abstraction Layer
 
-### 5. Firewall
-- **Linux**: `sudo ufw allow 8012/tcp`
-- **Windows**: `netsh advfirewall firewall add rule ...` (requires admin)
-- **Impact**: None — `scripts/setup_windows.ps1` automates this
+| Module | Status | Notes |
+|--------|--------|-------|
+| `teleop.platform.__init__` | TESTED | Platform detection (is_windows, is_linux) |
+| `teleop.platform.paths` | TESTED | Config/cert dir resolution (APPDATA on Windows, XDG on Linux) |
+| `teleop.platform.network` | TESTED | Network interface enumeration via psutil |
+| `teleop.platform.ipc_transport` | TESTED | ZMQ endpoint selection (ipc:// on Linux, tcp:// on Windows) |
+| `teleop.platform.process` | TESTED | WorkerHandle (Process on Linux, Thread on Windows) |
+| `teleop.platform.cpu_affinity` | TESTED | CPU affinity via psutil (cross-platform) |
+| `teleop.platform.firewall` | TESTED | Firewall instructions (netsh on Windows, ufw on Linux) |
+| `teleop.platform.certs` | UNTESTED | Certificate generation with SAN; requires OpenSSL on Windows |
 
-## Dependencies That Cannot Be Installed via pip on Windows
+---
 
-| Package | Reason | Solution |
-|---------|--------|----------|
-| Pinocchio | No pip wheel for Windows | `conda install pinocchio -c conda-forge` |
-| NLopt | No reliable pip wheel for Windows | `conda install nlopt -c conda-forge` |
+## Process Model
 
-All other dependencies have pip wheels for Windows.
+| Feature | Linux | Windows | Notes |
+|---------|-------|---------|-------|
+| Hand control workers | `multiprocessing.Process` (fork) | `threading.Thread` | Thread is safe: DDS is I/O-bound, GIL impact minimal |
+| Televuer server | `multiprocessing.Process` (fork) | `threading.Thread` | Vuer server is asyncio-based (I/O-bound) |
+| Shared state | `multiprocessing.Array/Value` | `multiprocessing.Array/Value` | Works with both threads and processes |
+| Shared memory | `shared_memory.SharedMemory` | `shared_memory.SharedMemory` | Available on Windows (Python 3.8+) |
+| IPC transport | `ipc://@` (abstract socket) | `tcp://127.0.0.1:PORT` | TCP fallback with port retry |
 
-## Remaining Limitations
+### Thread vs Process Analysis
 
-1. **Isaac Sim simulation** requires an NVIDIA GPU and Isaac Sim for Windows installation
-2. **Apple Vision Pro** certificate setup requires AirDrop or manual CA installation (same as Linux)
-3. **UVC camera server** (`image_server.py`) is Linux-only and runs on the robot — not needed on the Windows host PC
+The conversion from `Process` to `Thread` on Windows is safe because:
+
+1. **DDS communication is I/O-bound**: The DDS read/write calls release the GIL
+   while waiting for network I/O, so the main control loop is not blocked.
+
+2. **Retargeting computation is CPU-bound but short**: The hand retargeting
+   computation takes < 1ms per iteration at 100 Hz. The GIL is held briefly,
+   but the main loop (30 Hz) has 33ms between iterations, leaving ample time.
+
+3. **No shared mutable state without locks**: All shared state uses
+   `multiprocessing.Array/Value` with explicit locks, which are thread-safe.
+
+4. **Daemon threads clean up on exit**: Daemon threads are automatically
+   killed when the main process exits, preventing zombie processes.
+
+5. **`multiprocessing.spawn()` would fail**: Windows uses `spawn()` which
+   requires picklable targets. The hand controller objects contain DDS
+   channels (non-picklable C++ bindings), making `Process` impossible.
+
+---
+
+## Known Limitations
+
+1. **teleimager image server**: Uses Linux-specific `/dev/video*`, `modprobe`,
+   `sysfs` paths. The image *client* works on Windows, but the image *server*
+   must run on the robot (Linux). This is the original design — the server
+   runs on the robot's onboard computer, not the Windows PC.
+
+2. **Isaac Sim simulation**: Requires CUDA GPU and NVIDIA Isaac Sim. The
+   simulation mode (`--sim`) depends on Isaac Sim's Windows support.
+
+3. **Apple Vision Pro**: Requires a CA-signed certificate, not self-signed.
+   The user must follow the upstream certificate procedure.
+
+4. **DDS multicast on virtual adapters**: Virtual adapters (Docker, VMware,
+   Hyper-V, WSL) can interfere with DDS multicast discovery. The
+   `--network-interface` argument must be used to select the correct adapter.
+
+---
+
+## Overall Assessment
+
+**Status: Windows 11 port implemented; hardware validation pending.**
+
+The codebase is designed for Windows 11 with a platform abstraction layer,
+but the complete real-time pipeline has not been validated with physical
+hardware. The following must be completed before claiming "Windows 11
+fully supported":
+
+1. Validate native DLL loading (Pinocchio, CycloneDDS, CasADi, NLopt)
+2. Validate DDS discovery and robot state reception
+3. Validate XR device connection and tracking
+4. Validate arm/hand control with physical robot
+5. Validate 30-minute stability
+6. Validate 20 restart cycles
+7. Validate timing (frequency, jitter)
+8. Validate numerical results match Linux

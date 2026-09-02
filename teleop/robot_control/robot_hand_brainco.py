@@ -54,6 +54,7 @@ class Brainco_Controller_ctrl:
         self.right_hand_state_array = Array('d', brainco_Num_Motors, lock=True)
 
         # initialize subscribe thread
+        self._running = True
         self.subscribe_state_thread = threading.Thread(target=self._subscribe_hand_state)
         self.subscribe_state_thread.daemon = True
         self.subscribe_state_thread.start()
@@ -68,11 +69,21 @@ class Brainco_Controller_ctrl:
                                                                           xr_motion_data_ready_in))
         hand_control_process.daemon = True
         hand_control_process.start()
+        self._hand_process = hand_control_process
 
         logger_mp.info("Initialize Brainco_Controller_ctrl OK!\n")
 
+    def stop(self):
+        """Stop the controller: signal control loop and subscribe thread to exit."""
+        self.running = False
+        self._running = False
+        if hasattr(self, 'subscribe_state_thread'):
+            self.subscribe_state_thread.join(timeout=1.0)
+        if hasattr(self, '_hand_process'):
+            self._hand_process.join(timeout=2.0)
+
     def _subscribe_hand_state(self):
-        while True:
+        while self._running:
             left_hand_msg  = self.LeftHandState_subscriber.Read()
             right_hand_msg = self.RightHandState_subscriber.Read()
             if left_hand_msg is not None and right_hand_msg is not None:
@@ -205,6 +216,7 @@ class Brainco_Controller_hand:
         self.right_hand_state_array = Array('d', brainco_Num_Motors, lock=True)
 
         # initialize subscribe thread
+        self._running = True
         self.subscribe_state_thread = threading.Thread(target=self._subscribe_hand_state)
         self.subscribe_state_thread.daemon = True
         self.subscribe_state_thread.start()
@@ -218,11 +230,21 @@ class Brainco_Controller_hand:
                                                                           dual_hand_data_lock, dual_hand_state_array, dual_hand_action_array, xr_motion_data_ready_in))
         hand_control_process.daemon = True
         hand_control_process.start()
+        self._hand_process = hand_control_process
 
         logger_mp.info("Initialize Brainco_Controller_hand OK!")
 
+    def stop(self):
+        """Stop the controller: signal control loop and subscribe thread to exit."""
+        self.running = False
+        self._running = False
+        if hasattr(self, 'subscribe_state_thread'):
+            self.subscribe_state_thread.join(timeout=1.0)
+        if hasattr(self, '_hand_process'):
+            self._hand_process.join(timeout=2.0)
+
     def _subscribe_hand_state(self):
-        while True:
+        while self._running:
             left_hand_msg  = self.LeftHandState_subscriber.Read()
             right_hand_msg = self.RightHandState_subscriber.Read()
             if left_hand_msg is not None and right_hand_msg is not None:

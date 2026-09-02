@@ -55,3 +55,16 @@ def get_os_version() -> str:
         return platform.uname().release
     else:
         return platform.version()
+
+
+# Re-export commonly used functions for convenience
+def get_network_interfaces():
+    """List network interfaces (lazy import to avoid psutil dependency at import time)."""
+    from teleop.platform.network import list_network_interfaces
+    return list_network_interfaces()
+
+
+def get_ipc_endpoint(name: str) -> str:
+    """Get the ZMQ IPC endpoint for a channel (lazy import)."""
+    from teleop.platform.ipc_transport import get_ipc_endpoint as _get
+    return _get(name)

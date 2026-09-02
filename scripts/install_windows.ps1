@@ -178,11 +178,19 @@ if (Test-Path $sdkDir) {
     Pop-Location
     Write-OK "unitree_sdk2_python installed"
 } else {
-    Write-Warn "unitree_sdk2_python not found at $sdkDir"
-    Write-Host "  Please clone and install it manually:"
-    Write-Host "    git clone https://github.com/unitreerobotics/unitree_sdk2_python.git"
-    Write-Host "    cd unitree_sdk2_python"
-    Write-Host "    pip install -e ."
+    Write-Host "  Cloning unitree_sdk2_python..."
+    git clone https://github.com/unitreerobotics/unitree_sdk2_python.git $sdkDir
+    if ($LASTEXITCODE -eq 0) {
+        Push-Location $sdkDir
+        pip install -e .
+        Pop-Location
+        Write-OK "unitree_sdk2_python installed"
+    } else {
+        Write-Warn "Failed to clone unitree_sdk2_python. Please install manually:"
+        Write-Host "    git clone https://github.com/unitreerobotics/unitree_sdk2_python.git"
+        Write-Host "    cd unitree_sdk2_python"
+        Write-Host "    pip install -e ."
+    }
 }
 
 # ---------------------------------------------------------------------------
@@ -191,25 +199,36 @@ if (Test-Path $sdkDir) {
 if (-not $SkipCerts) {
     Write-Step "Configuring SSL certificates"
     
-    $certDir = "$env:APPDATA\xr_teleoperate"
-    if (-not (Test-Path $certDir)) {
-        New-Item -ItemType Directory -Path $certDir -Force | Out-Null
-    }
-    
-    $certFile = "$certDir\cert.pem"
-    $keyFile = "$certDir\key.pem"
-    
-    if ((Test-Path $certFile) -and (Test-Path $keyFile)) {
-        Write-OK "SSL certificates already exist at $certDir"
-    } else {
-        Write-Host "Generating self-signed SSL certificates..."
-        openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout $keyFile -out $certFile -subj "/CN=localhost"
-        if ($LASTEXITCODE -ne 0) {
-            Write-Warn "OpenSSL not found or failed. Please generate certificates manually."
-            Write-Host "  See docs/WINDOWS.md for instructions."
-        } else {
-            Write-OK "SSL certificates generated at $certDir"
+    # Use the Python certificate module for proper SAN generation
+    python -c "from teleop.platform.certs import ensure_certificates, print_certificate_instructions; ensure_certificates(); print_certificate_instructions()"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warn "Python certificate generation failed. Trying OpenSSL fallback..."
+        
+        $certDir = "$env:APPDATA\xr_teleoperate"
+        if (-not (Test-Path $certDir)) {
+            New-Item -ItemType Directory -Path $certDir -Force | Out-Null
         }
+        
+        $certFile = "$certDir\cert.pem"
+        $keyFile = "$certDir\key.pem"
+        
+        if ((Test-Path $certFile) -and (Test-Path $keyFile)) {
+            Write-OK "SSL certificates already exist at $certDir"
+        } else {
+            # Get LAN IP for certificate CN
+            $lanIp = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike "127.*" -and $_.IPAddress -notlike "169.*" } | Select-Object -First 1).IPAddress
+            if (-not $lanIp) { $lanIp = "localhost" }
+            
+            openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout $keyFile -out $certFile -subj "/CN=$lanIp"
+            if ($LASTEXITCODE -ne 0) {
+                Write-Warn "OpenSSL not found or failed. Please generate certificates manually."
+                Write-Host "  See docs/WINDOWS.md for instructions."
+            } else {
+                Write-OK "SSL certificates generated at $certDir (CN: $lanIp)"
+            }
+        }
+    } else {
+        Write-OK "SSL certificates configured"
     }
 } else {
     Write-Warn "Skipping certificate generation (--SkipCerts)"

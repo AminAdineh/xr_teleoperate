@@ -543,6 +543,18 @@ if __name__ == '__main__':
             logger_mp.error(f"Failed to ctrl_dual_arm_go_home: {e}")
         
         try:
+            if 'hand_ctrl' in locals() and hasattr(hand_ctrl, 'stop'):
+                hand_ctrl.stop()
+        except Exception as e:
+            logger_mp.error(f"Failed to stop hand controller: {e}")
+
+        try:
+            if 'gripper_ctrl' in locals() and hasattr(gripper_ctrl, 'stop'):
+                gripper_ctrl.stop()
+        except Exception as e:
+            logger_mp.error(f"Failed to stop gripper controller: {e}")
+
+        try:
             if args.ipc:
                 ipc_server.stop()
             else:
