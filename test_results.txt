@@ -156,7 +156,7 @@ tests/test_paths.py::TestRecordingPaths::test_episode_path_uses_os_join
 tests/test_platform.py::TestProcessAbstraction::test_worker_handle_creation
 tests/test_platform.py::TestProcessAbstraction::test_spawn_worker
 tests/test_platform.py::TestProcessAbstraction::test_worker_is_process_on_linux
-  /usr/local/lib/python3.12/multiprocessing/popen_fork.py:66: DeprecationWarning: This process (pid=1231) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  /usr/local/lib/python3.12/multiprocessing/popen_fork.py:66: DeprecationWarning: This process (pid=86) is multi-threaded, use of fork() may lead to deadlocks in the child.
     self.pid = os.fork()
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
@@ -167,4 +167,4 @@ FAILED tests/test_sdk_import.py::TestSDKImport::test_import_channel_subscriber -
 FAILED tests/test_sdk_import.py::TestSDKImport::test_import_crc - Failed: unitree_sdk2py.utils.crc.CRC not available
 FAILED tests/test_sdk_import.py::TestSDKImport::test_import_hg_lowcmd - Failed: unitree_sdk2py.idl.unitree_hg.msg.dds_.LowCmd_ not available
 FAILED tests/test_sdk_import.py::TestSDKImport::test_import_go_lowcmd - Failed: unitree_sdk2py.idl.unitree_go.msg.dds_.LowCmd_ not available
-============= 6 failed, 73 passed, 7 skipped, 5 warnings in 2.19s ==============
+============= 6 failed, 73 passed, 7 skipped, 5 warnings in 2.33s ==============

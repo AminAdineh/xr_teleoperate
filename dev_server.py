@@ -13,10 +13,12 @@ dashboard for the development environment.
 from __future__ import annotations
 
 import http.server
+import io
 import os
 import re
 import socketserver
 import sys
+import zipfile
 from pathlib import Path
 
 PORT = 3000
@@ -123,6 +125,18 @@ def _build_page() -> str:
   }}
   .badge-desktop {{ background: #1f3a5f; color: var(--accent); }}
   .badge-python {{ background: #1f3f1f; color: #7ee787; }}
+  .download-btn {{
+    display: inline-block;
+    background: var(--accent);
+    color: #0d1117;
+    font-weight: 600;
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    text-decoration: none;
+    margin-top: 0.75rem;
+    transition: opacity 0.15s;
+  }}
+  .download-btn:hover {{ opacity: 0.85; }}
 </style>
 </head>
 <body>
@@ -141,6 +155,7 @@ def _build_page() -> str:
     communicates via ZMQ IPC.</p>
     <p style="margin-top:0.5rem">The actual desktop application requires a display server and robot
     hardware. This page shows the development/test status.</p>
+    <a class="download-btn" href="/download">⬇ Download Windows Package (xr-edi-windows.zip)</a>
   </div>
 
   <div class="card">
@@ -165,8 +180,41 @@ def _build_page() -> str:
 </html>"""
 
 
+# Directories/files excluded from the Windows package zip
+_EXCLUDE_DIRS = {".git", "__pycache__", ".pytest_cache", "node_modules", ".git"}
+_EXCLUDE_EXTS = {".pyc", ".pyo"}
+
+
+def _build_windows_zip() -> bytes:
+    """Build an in-memory zip of the whole project for Windows deployment."""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for root, dirs, files in os.walk(str(PROJECT_ROOT)):
+            # prune excluded dirs in-place
+            dirs[:] = [d for d in dirs if d not in _EXCLUDE_DIRS]
+            for fname in files:
+                if any(fname.endswith(ext) for ext in _EXCLUDE_EXTS):
+                    continue
+                fpath = os.path.join(root, fname)
+                arcname = os.path.relpath(fpath, str(PROJECT_ROOT))
+                # store under a top-level folder so it extracts neatly
+                zf.write(fpath, os.path.join("xr-edi-windows", arcname))
+    buf.seek(0)
+    return buf.getvalue()
+
+
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
+        if self.path == "/download" or self.path.startswith("/download?"):
+            data = _build_windows_zip()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/zip")
+            self.send_header("Content-Disposition", 'attachment; filename="xr-edi-windows.zip"')
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            return
+
         page = _build_page()
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
