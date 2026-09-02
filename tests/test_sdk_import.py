@@ -104,8 +104,8 @@ class TestSubmoduleImports:
 
     def test_teleimager_import(self):
         try:
-            import teleimager
-            assert hasattr(teleimager, 'ImageClient')
+            from teleimager.image_client import ImageClient
+            assert ImageClient is not None
         except ImportError:
             pytest.fail("teleimager submodule not installed. cd teleop/teleimager && pip install -e . --no-deps")
 

@@ -1,0 +1,170 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.14, pytest-9.1.1, pluggy-1.6.0 -- /usr/local/bin/python
+cachedir: .pytest_cache
+rootdir: /app
+configfile: pytest.ini
+collecting ... collected 86 items
+
+tests/test_configuration.py::TestCLIArguments::test_parser_has_required_args PASSED [  1%]
+tests/test_configuration.py::TestCLIArguments::test_list_interfaces_flag PASSED [  2%]
+tests/test_configuration.py::TestCLIArguments::test_network_interface_accepts_windows_names PASSED [  3%]
+tests/test_configuration.py::TestIPCConfiguration::test_ipc_server_client_same_endpoint PASSED [  4%]
+tests/test_configuration.py::TestIPCConfiguration::test_ipc_heartbeat_endpoint PASSED [  5%]
+tests/test_configuration.py::TestCertificateConfiguration::test_cert_env_var_resolution PASSED [  6%]
+tests/test_configuration.py::TestCertificateConfiguration::test_cert_dir_resolution PASSED [  8%]
+tests/test_configuration.py::TestRecordingConfiguration::test_task_dir_uses_os_path PASSED [  9%]
+tests/test_configuration.py::TestRecordingConfiguration::test_episode_dir_format PASSED [ 10%]
+tests/test_configuration.py::TestMultiprocessingGuard::test_main_guard_exists PASSED [ 11%]
+tests/test_dependencies.py::TestRequiredDependencies::test_import[numpy-numpy] PASSED [ 12%]
+tests/test_dependencies.py::TestRequiredDependencies::test_import[scipy-scipy] PASSED [ 13%]
+tests/test_dependencies.py::TestRequiredDependencies::test_import[opencv-cv2] PASSED [ 15%]
+tests/test_dependencies.py::TestRequiredDependencies::test_import[pyzmq-zmq] PASSED [ 16%]
+tests/test_dependencies.py::TestRequiredDependencies::test_import[pyyaml-yaml] PASSED [ 17%]
+tests/test_dependencies.py::TestRequiredDependencies::test_import[casadi-casadi] PASSED [ 18%]
+tests/test_dependencies.py::TestRequiredDependencies::test_import[pinocchio-pinocchio] PASSED [ 19%]
+tests/test_dependencies.py::TestRequiredDependencies::test_import[pytorch-torch] PASSED [ 20%]
+tests/test_dependencies.py::TestRequiredDependencies::test_import[meshcat-meshcat] PASSED [ 22%]
+tests/test_dependencies.py::TestRequiredDependencies::test_import[psutil-psutil] PASSED [ 23%]
+tests/test_dependencies.py::TestRequiredDependencies::test_import[sshkeyboard-sshkeyboard] PASSED [ 24%]
+tests/test_dependencies.py::TestRequiredDependencies::test_import[logging_mp-logging_mp] PASSED [ 25%]
+tests/test_dependencies.py::TestRequiredDependencies::test_import[pytransform3d-pytransform3d] PASSED [ 26%]
+tests/test_dependencies.py::TestRequiredDependencies::test_import[trimesh-trimesh] PASSED [ 27%]
+tests/test_dependencies.py::TestRequiredDependencies::test_import[anytree-anytree] PASSED [ 29%]
+tests/test_dependencies.py::TestRequiredDependencies::test_import[lxml-lxml] PASSED [ 30%]
+tests/test_dependencies.py::TestRequiredDependencies::test_import[nlopt-nlopt] PASSED [ 31%]
+tests/test_dependencies.py::TestOptionalDependencies::test_import[rerun-rerun] PASSED [ 32%]
+tests/test_dependencies.py::TestOptionalDependencies::test_import[vuer-vuer] PASSED [ 33%]
+tests/test_dependencies.py::TestOptionalDependencies::test_import[aiortc-aiortc] SKIPPED [ 34%]
+tests/test_dependencies.py::TestOptionalDependencies::test_import[aiohttp-aiohttp] PASSED [ 36%]
+tests/test_dependencies.py::TestDependencyVersions::test_numpy_version_compatible PASSED [ 37%]
+tests/test_dependencies.py::TestDependencyVersions::test_python_version_compatible PASSED [ 38%]
+tests/test_network.py::TestNetworkInterface::test_list_interfaces_returns_list PASSED [ 39%]
+tests/test_network.py::TestNetworkInterface::test_interface_has_required_fields PASSED [ 40%]
+tests/test_network.py::TestNetworkInterface::test_loopback_exists PASSED [ 41%]
+tests/test_network.py::TestNetworkInterface::test_resolve_interface_ip_returns_string PASSED [ 43%]
+tests/test_network.py::TestNetworkInterface::test_find_interface_for_ip_returns_none_for_invalid PASSED [ 44%]
+tests/test_network.py::TestNetworkInterface::test_is_ip_reachable_returns_bool PASSED [ 45%]
+tests/test_network.py::TestNetworkInterface::test_is_ip_reachable_invalid_ip PASSED [ 46%]
+tests/test_network.py::TestNetworkInterface::test_print_interfaces_does_not_crash PASSED [ 47%]
+tests/test_paths.py::TestConfigDir::test_config_dir_is_path PASSED       [ 48%]
+tests/test_paths.py::TestConfigDir::test_config_dir_contains_xr_teleoperate PASSED [ 50%]
+tests/test_paths.py::TestConfigDir::test_ensure_config_dir_creates PASSED [ 51%]
+tests/test_paths.py::TestConfigDir::test_config_dir_windows_uses_appdata SKIPPED [ 52%]
+tests/test_paths.py::TestConfigDir::test_config_dir_linux_uses_home_config PASSED [ 53%]
+tests/test_paths.py::TestCertPaths::test_cert_paths_return_strings PASSED [ 54%]
+tests/test_paths.py::TestCertPaths::test_cert_paths_from_env PASSED      [ 55%]
+tests/test_paths.py::TestDataDir::test_data_dir_is_path PASSED           [ 56%]
+tests/test_paths.py::TestDataDir::test_data_dir_contains_data PASSED     [ 58%]
+tests/test_paths.py::TestRecordingPaths::test_episode_path_uses_os_join PASSED [ 59%]
+tests/test_paths.py::TestRecordingPaths::test_pathlib_imports PASSED     [ 60%]
+tests/test_platform.py::TestPlatformDetection::test_is_windows_or_linux PASSED [ 61%]
+tests/test_platform.py::TestPlatformDetection::test_platform_name PASSED [ 62%]
+tests/test_platform.py::TestPlatformDetection::test_python_arch PASSED   [ 63%]
+tests/test_platform.py::TestPlatformDetection::test_os_version PASSED    [ 65%]
+tests/test_platform.py::TestPathResolution::test_config_dir_exists_or_creatable PASSED [ 66%]
+tests/test_platform.py::TestPathResolution::test_config_dir_platform_correct PASSED [ 67%]
+tests/test_platform.py::TestPathResolution::test_cert_paths_return_strings PASSED [ 68%]
+tests/test_platform.py::TestPathResolution::test_data_dir PASSED         [ 69%]
+tests/test_platform.py::TestIPCTransport::test_endpoint_is_valid_zmq PASSED [ 70%]
+tests/test_platform.py::TestIPCTransport::test_endpoint_consistent PASSED [ 72%]
+tests/test_platform.py::TestIPCTransport::test_different_channels_different_endpoints PASSED [ 73%]
+tests/test_platform.py::TestIPCTransport::test_strips_at_prefix PASSED   [ 74%]
+tests/test_platform.py::TestIPCTransport::test_windows_uses_tcp SKIPPED  [ 75%]
+tests/test_platform.py::TestIPCTransport::test_linux_uses_ipc PASSED     [ 76%]
+tests/test_platform.py::TestProcessAbstraction::test_worker_handle_creation PASSED [ 77%]
+tests/test_platform.py::TestProcessAbstraction::test_spawn_worker PASSED [ 79%]
+tests/test_platform.py::TestProcessAbstraction::test_worker_is_process_on_linux PASSED [ 80%]
+tests/test_platform.py::TestCPUAffinity::test_get_cpu_count PASSED       [ 81%]
+tests/test_platform.py::TestCPUAffinity::test_get_cpu_affinity_returns_list PASSED [ 82%]
+tests/test_platform.py::TestFirewall::test_firewall_instructions_returned PASSED [ 83%]
+tests/test_platform.py::TestFirewall::test_required_ports_defined PASSED [ 84%]
+tests/test_sdk_import.py::TestSDKImport::test_import_channel_factory FAILED [ 86%]
+tests/test_sdk_import.py::TestSDKImport::test_import_channel_publisher FAILED [ 87%]
+tests/test_sdk_import.py::TestSDKImport::test_import_channel_subscriber FAILED [ 88%]
+tests/test_sdk_import.py::TestSDKImport::test_import_crc FAILED          [ 89%]
+tests/test_sdk_import.py::TestSDKImport::test_import_hg_lowcmd FAILED    [ 90%]
+tests/test_sdk_import.py::TestSDKImport::test_import_go_lowcmd FAILED    [ 91%]
+tests/test_sdk_import.py::TestSDKImport::test_import_motion_switcher SKIPPEDpes)) [ 93%]
+tests/test_sdk_import.py::TestSDKImport::test_import_loco_client SKIPPED [ 94%]
+tests/test_sdk_import.py::TestDDSInitialization::test_cyclonedds_available SKIPPED [ 95%]
+tests/test_sdk_import.py::TestDDSInitialization::test_dds_factory_init SKIPPED [ 96%]
+tests/test_sdk_import.py::TestSubmoduleImports::test_televuer_import PASSED [ 97%]
+tests/test_sdk_import.py::TestSubmoduleImports::test_teleimager_import PASSED [ 98%]
+tests/test_sdk_import.py::TestSubmoduleImports::test_dex_retargeting_import PASSED [100%]
+
+=================================== FAILURES ===================================
+__________________ TestSDKImport.test_import_channel_factory ___________________
+tests/test_sdk_import.py:21: in test_import_channel_factory
+    from unitree_sdk2py.core.channel import ChannelFactoryInitialize
+E   ModuleNotFoundError: No module named 'unitree_sdk2py'
+
+During handling of the above exception, another exception occurred:
+tests/test_sdk_import.py:24: in test_import_channel_factory
+    pytest.fail("unitree_sdk2_python is not installed. "
+E   Failed: unitree_sdk2_python is not installed. git clone https://github.com/unitreerobotics/unitree_sdk2_python.git && cd unitree_sdk2_python && pip install -e .
+_________________ TestSDKImport.test_import_channel_publisher __________________
+tests/test_sdk_import.py:30: in test_import_channel_publisher
+    from unitree_sdk2py.core.channel import ChannelPublisher
+E   ModuleNotFoundError: No module named 'unitree_sdk2py'
+
+During handling of the above exception, another exception occurred:
+tests/test_sdk_import.py:33: in test_import_channel_publisher
+    pytest.fail("unitree_sdk2py.core.channel.ChannelPublisher not available")
+E   Failed: unitree_sdk2py.core.channel.ChannelPublisher not available
+_________________ TestSDKImport.test_import_channel_subscriber _________________
+tests/test_sdk_import.py:37: in test_import_channel_subscriber
+    from unitree_sdk2py.core.channel import ChannelSubscriber
+E   ModuleNotFoundError: No module named 'unitree_sdk2py'
+
+During handling of the above exception, another exception occurred:
+tests/test_sdk_import.py:40: in test_import_channel_subscriber
+    pytest.fail("unitree_sdk2py.core.channel.ChannelSubscriber not available")
+E   Failed: unitree_sdk2py.core.channel.ChannelSubscriber not available
+________________________ TestSDKImport.test_import_crc _________________________
+tests/test_sdk_import.py:44: in test_import_crc
+    from unitree_sdk2py.utils.crc import CRC
+E   ModuleNotFoundError: No module named 'unitree_sdk2py'
+
+During handling of the above exception, another exception occurred:
+tests/test_sdk_import.py:47: in test_import_crc
+    pytest.fail("unitree_sdk2py.utils.crc.CRC not available")
+E   Failed: unitree_sdk2py.utils.crc.CRC not available
+_____________________ TestSDKImport.test_import_hg_lowcmd ______________________
+tests/test_sdk_import.py:51: in test_import_hg_lowcmd
+    from unitree_sdk2py.idl.unitree_hg.msg.dds_ import LowCmd_ as hg_LowCmd
+E   ModuleNotFoundError: No module named 'unitree_sdk2py'
+
+During handling of the above exception, another exception occurred:
+tests/test_sdk_import.py:54: in test_import_hg_lowcmd
+    pytest.fail("unitree_sdk2py.idl.unitree_hg.msg.dds_.LowCmd_ not available")
+E   Failed: unitree_sdk2py.idl.unitree_hg.msg.dds_.LowCmd_ not available
+_____________________ TestSDKImport.test_import_go_lowcmd ______________________
+tests/test_sdk_import.py:58: in test_import_go_lowcmd
+    from unitree_sdk2py.idl.unitree_go.msg.dds_ import LowCmd_ as go_LowCmd
+E   ModuleNotFoundError: No module named 'unitree_sdk2py'
+
+During handling of the above exception, another exception occurred:
+tests/test_sdk_import.py:61: in test_import_go_lowcmd
+    pytest.fail("unitree_sdk2py.idl.unitree_go.msg.dds_.LowCmd_ not available")
+E   Failed: unitree_sdk2py.idl.unitree_go.msg.dds_.LowCmd_ not available
+=============================== warnings summary ===============================
+tests/test_dependencies.py::TestRequiredDependencies::test_import[meshcat-meshcat]
+  /usr/local/lib/python3.12/site-packages/meshcat/servers/zmqserver.py:18: DeprecationWarning: zmq.eventloop.ioloop is deprecated in pyzmq 17. pyzmq now works with default tornado and asyncio eventloops.
+    import zmq.eventloop.ioloop
+
+tests/test_paths.py::TestRecordingPaths::test_episode_path_uses_os_join
+tests/test_platform.py::TestProcessAbstraction::test_worker_handle_creation
+tests/test_platform.py::TestProcessAbstraction::test_spawn_worker
+tests/test_platform.py::TestProcessAbstraction::test_worker_is_process_on_linux
+  /usr/local/lib/python3.12/multiprocessing/popen_fork.py:66: DeprecationWarning: This process (pid=1231) is multi-threaded, use of fork() may lead to deadlocks in the child.
+    self.pid = os.fork()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_sdk_import.py::TestSDKImport::test_import_channel_factory - Failed: unitree_sdk2_python is not installed. git clone https://github.com/unitreerobotics/unitree_sdk2_python.git && cd unitree_sdk2_python && pip install -e .
+FAILED tests/test_sdk_import.py::TestSDKImport::test_import_channel_publisher - Failed: unitree_sdk2py.core.channel.ChannelPublisher not available
+FAILED tests/test_sdk_import.py::TestSDKImport::test_import_channel_subscriber - Failed: unitree_sdk2py.core.channel.ChannelSubscriber not available
+FAILED tests/test_sdk_import.py::TestSDKImport::test_import_crc - Failed: unitree_sdk2py.utils.crc.CRC not available
+FAILED tests/test_sdk_import.py::TestSDKImport::test_import_hg_lowcmd - Failed: unitree_sdk2py.idl.unitree_hg.msg.dds_.LowCmd_ not available
+FAILED tests/test_sdk_import.py::TestSDKImport::test_import_go_lowcmd - Failed: unitree_sdk2py.idl.unitree_go.msg.dds_.LowCmd_ not available
+============= 6 failed, 73 passed, 7 skipped, 5 warnings in 2.19s ==============
