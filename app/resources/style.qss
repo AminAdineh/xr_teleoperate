@@ -1,0 +1,382 @@
+# Unitree XR Teleoperate — Qt Stylesheet (Windows 11 dark theme)
+
+# This stylesheet gives the application a modern, native-feeling dark
+# appearance inspired by Windows 11's Fluent Design.
+
+# ---------------------------------------------------------------------------
+# Color palette
+# ---------------------------------------------------------------------------
+
+# Background:       #1e1e2e  (deep navy)
+# Surface:          #2a2a3c  (card background)
+# Surface hover:    #353550
+# Accent:           #4cc2ff  (Windows 11 accent blue)
+# Accent hover:     #66ccff
+# Accent pressed:   #3399cc
+# Text primary:     #e8e8f0
+# Text secondary:   #a0a0b8
+# Success:          #4ade80
+# Warning:          #fbbf24
+# Error:            #f87171
+# Border:           #3a3a4e
+
+# ---------------------------------------------------------------------------
+# General
+# ---------------------------------------------------------------------------
+
+QWidget {
+    background-color: #1e1e2e;
+    color: #e8e8f0;
+    font-family: "Segoe UI Variable", "Segoe UI", "Arial", sans-serif;
+    font-size: 14px;
+}
+
+QMainWindow {
+    background-color: #1e1e2e;
+}
+
+# ---------------------------------------------------------------------------
+# Sidebar navigation
+# ---------------------------------------------------------------------------
+
+QFrame#Sidebar {
+    background-color: #16161e;
+    border-right: 1px solid #2a2a3c;
+}
+
+QPushButton#NavButton {
+    background-color: transparent;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 16px;
+    text-align: left;
+    color: #a0a0b8;
+    font-size: 14px;
+}
+
+QPushButton#NavButton:hover {
+    background-color: #2a2a3c;
+    color: #e8e8f0;
+}
+
+QPushButton#NavButton:checked {
+    background-color: #2a2a3c;
+    color: #4cc2ff;
+    border-left: 3px solid #4cc2ff;
+}
+
+# ---------------------------------------------------------------------------
+# Cards / panels
+# ---------------------------------------------------------------------------
+
+QFrame#Card {
+    background-color: #2a2a3c;
+    border-radius: 8px;
+    border: 1px solid #3a3a4e;
+}
+
+QLabel#CardTitle {
+    font-size: 12px;
+    color: #a0a0b8;
+    font-weight: bold;
+}
+
+QLabel#CardValue {
+    font-size: 18px;
+    color: #e8e8f0;
+    font-weight: bold;
+}
+
+QLabel#SectionHeader {
+    font-size: 16px;
+    color: #e8e8f0;
+    font-weight: bold;
+}
+
+# ---------------------------------------------------------------------------
+# Status indicators
+# ---------------------------------------------------------------------------
+
+QLabel#StatusOk {
+    color: #4ade80;
+}
+QLabel#StatusWarning {
+    color: #fbbf24;
+}
+QLabel#StatusError {
+    color: #f87171;
+}
+QLabel#StatusIdle {
+    color: #a0a0b8;
+}
+
+# ---------------------------------------------------------------------------
+# Buttons
+# ---------------------------------------------------------------------------
+
+QPushButton {
+    background-color: #2a2a3c;
+    border: 1px solid #3a3a4e;
+    border-radius: 6px;
+    padding: 8px 20px;
+    color: #e8e8f0;
+    font-size: 14px;
+}
+
+QPushButton:hover {
+    background-color: #353550;
+    border-color: #4cc2ff;
+}
+
+QPushButton:pressed {
+    background-color: #2a2a3c;
+}
+
+QPushButton:disabled {
+    color: #606070;
+    background-color: #252535;
+    border-color: #2a2a3c;
+}
+
+QPushButton#PrimaryButton {
+    background-color: #4cc2ff;
+    color: #1e1e2e;
+    border: none;
+    font-weight: bold;
+    font-size: 15px;
+    padding: 10px 28px;
+}
+
+QPushButton#PrimaryButton:hover {
+    background-color: #66ccff;
+}
+
+QPushButton#PrimaryButton:pressed {
+    background-color: #3399cc;
+}
+
+QPushButton#PrimaryButton:disabled {
+    background-color: #2a2a3c;
+    color: #606070;
+}
+
+QPushButton#DangerButton {
+    background-color: #f87171;
+    color: #1e1e2e;
+    border: none;
+    font-weight: bold;
+    font-size: 16px;
+    padding: 14px 40px;
+}
+
+QPushButton#DangerButton:hover {
+    background-color: #ff8888;
+}
+
+QPushButton#DangerButton:pressed {
+    background-color: #cc5555;
+}
+
+QPushButton#DangerButton:disabled {
+    background-color: #3a2a2a;
+    color: #606070;
+}
+
+QPushButton#StopButton {
+    background-color: #f87171;
+    color: #ffffff;
+    border: none;
+    font-weight: bold;
+    font-size: 20px;
+    padding: 20px 60px;
+    border-radius: 10px;
+}
+
+QPushButton#StopButton:hover {
+    background-color: #ff8888;
+}
+
+QPushButton#StopButton:pressed {
+    background-color: #cc5555;
+}
+
+# ---------------------------------------------------------------------------
+# Inputs
+# ---------------------------------------------------------------------------
+
+QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
+    background-color: #1e1e2e;
+    border: 1px solid #3a3a4e;
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: #e8e8f0;
+    font-size: 14px;
+}
+
+QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
+    border-color: #4cc2ff;
+}
+
+QComboBox::drop-down {
+    border: none;
+    width: 24px;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #2a2a3c;
+    border: 1px solid #3a3a4e;
+    selection-background-color: #4cc2ff;
+    color: #e8e8f0;
+}
+
+# ---------------------------------------------------------------------------
+# Checkboxes / Radio
+# ---------------------------------------------------------------------------
+
+QCheckBox, QRadioButton {
+    color: #e8e8f0;
+    spacing: 8px;
+}
+
+QCheckBox::indicator, QRadioButton::indicator {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #3a3a4e;
+    border-radius: 4px;
+    background-color: #1e1e2e;
+}
+
+QRadioButton::indicator {
+    border-radius: 9px;
+}
+
+QCheckBox::indicator:checked, QRadioButton::indicator:checked {
+    background-color: #4cc2ff;
+    border-color: #4cc2ff;
+}
+
+# ---------------------------------------------------------------------------
+# Progress bar
+# ---------------------------------------------------------------------------
+
+QProgressBar {
+    background-color: #1e1e2e;
+    border: 1px solid #3a3a4e;
+    border-radius: 4px;
+    text-align: center;
+    color: #e8e8f0;
+    height: 20px;
+}
+
+QProgressBar::chunk {
+    background-color: #4cc2ff;
+    border-radius: 3px;
+}
+
+# ---------------------------------------------------------------------------
+# Scroll area
+# ---------------------------------------------------------------------------
+
+QScrollArea {
+    border: none;
+    background-color: transparent;
+}
+
+QScrollBar:vertical {
+    background: #1e1e2e;
+    width: 10px;
+    border: none;
+}
+
+QScrollBar::handle:vertical {
+    background: #3a3a4e;
+    border-radius: 5px;
+    min-height: 30px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #4cc2ff;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+QScrollBar:horizontal {
+    background: #1e1e2e;
+    height: 10px;
+    border: none;
+}
+
+QScrollBar::handle:horizontal {
+    background: #3a3a4e;
+    border-radius: 5px;
+    min-width: 30px;
+}
+
+# ---------------------------------------------------------------------------
+# Log view
+# ---------------------------------------------------------------------------
+
+QPlainTextEdit#LogView {
+    background-color: #16161e;
+    border: 1px solid #2a2a3c;
+    border-radius: 6px;
+    font-family: "Cascadia Code", "Consolas", "Courier New", monospace;
+    font-size: 12px;
+    color: #c0c0d0;
+}
+
+# ---------------------------------------------------------------------------
+# Wizard
+# ---------------------------------------------------------------------------
+
+QFrame#WizardPage {
+    background-color: #1e1e2e;
+}
+
+QLabel#WizardTitle {
+    font-size: 24px;
+    font-weight: bold;
+    color: #e8e8f0;
+}
+
+QLabel#WizardSubtitle {
+    font-size: 14px;
+    color: #a0a0b8;
+}
+
+# ---------------------------------------------------------------------------
+# Group box
+# ---------------------------------------------------------------------------
+
+QGroupBox {
+    border: 1px solid #3a3a4e;
+    border-radius: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    color: #a0a0b8;
+    font-weight: bold;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 12px;
+    padding: 0 4px;
+}
+
+# ---------------------------------------------------------------------------
+# Dialog
+# ---------------------------------------------------------------------------
+
+QDialog {
+    background-color: #1e1e2e;
+}
+
+# ---------------------------------------------------------------------------
+# Status dot
+# ---------------------------------------------------------------------------
+
+QLabel#StatusDot {
+    font-size: 16px;
+}
